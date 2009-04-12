@@ -23,11 +23,13 @@ namespace OpenTheDoc
             @"C:\Documents and Settings\All Users\Application Data\Adobe\Flash CS3\en\Configuration\HelpPanel\Help\ActionScriptLangRefV3",
         };
 
+        static public string[] TOCS = { "otd_toc.xml", "help_toc.xml", "tocAPI.xml", "toc.xml" };
+
         const bool HANDLE_F1 = false;
         const bool OPEN_FIRST_TOPIC = false;
 
         private string[] docPaths = DOC_PATHS;
-        private string[] toc = { "otd_toc.xml", "help_toc.xml", "tocAPI.xml", "toc.xml" };
+        private string[] toc = TOCS;
         private string homePage;
         private DocumentViewer docViewer = DocumentViewer.HelpContents;
         private bool openFirstTopic = OPEN_FIRST_TOPIC;
@@ -49,7 +51,7 @@ namespace OpenTheDoc
         [Category("Documentation"), Description("File name of TOC. There can be more than one TOC file in a folder.")]
         public string[] TOC
         {
-            get { return toc; }
+            get { return toc == null ? TOCS : toc; }
             set { toc = value; }
         }
 
