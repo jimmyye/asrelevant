@@ -1,5 +1,11 @@
 OpenTheDoc: Open ASDocs for FlashDevelop 3
 
+0. Update from 2.0
+First backup your DocPaths and delete the setting file in Data/OpenTheDoc.
+If you installed FD in normal mode (not standalone), the file may locate in:
+In xp: C:\Documents and Settings\<user>\Local Settings\Application Data\FlashDevelop\Data\OpenTheDoc
+And may be different in other systems.
+
 1. Installation
 Main Menu - Tools - Application Files - Copy OpenTheDoc.dll to the Plugins folder
 If you have an older version, first backup your DocPaths and delete the setting file in Data/OpenTheDoc.

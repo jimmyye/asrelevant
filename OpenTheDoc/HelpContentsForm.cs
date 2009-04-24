@@ -62,6 +62,7 @@ namespace OpenTheDoc
             // 
             this.browser = new Browser();
             this.browser.Dock = DockStyle.Fill;
+            this.browser.WebBrowser.WebBrowserShortcutsEnabled = true;
             this.browser.WebBrowser.ScriptErrorsSuppressed = true;
             this.browser.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
             this.browser.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
