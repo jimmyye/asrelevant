@@ -139,6 +139,8 @@ namespace OpenTheDoc
                         foreach (DictionaryEntry item in itemDetailsHashtable)
                             itemDetails.Add(item.Key as string, item.Value as string);
 
+                        this.DebugPrint("Item Details:", itemDetails);
+
                         relatedTopicsList = new List<NameValueCollection>();
                         NameValueCollection relatedTopics;  // relatedTopics in a book. The first item will be a group of the ListView
                         NameValueCollection onlineDocs = null;  // The first item will be a group of the ListView
@@ -147,9 +149,15 @@ namespace OpenTheDoc
                         bool isFunction = itemDetails["ItmKind"] == "function";
                         bool isTopLevelClass = itemDetails["ItmTypName"] == itemDetails["ItmTypPkgName"];
 
+                        string lang = PluginBase.CurrentProject.Language;
+                        this.DebugPrint("Project Language:", lang);
+
                         #region Books with TOC
                         foreach (Book book in this.GetBooks())
                         {
+                            // Language detecting
+                            if (book.Categories.Count > 0 && !book.Categories.Contains(lang)) continue;
+
                             XmlNode toc = book.Toc;
                             string path = book.Path;
 
@@ -314,8 +322,6 @@ namespace OpenTheDoc
 
                         this.ShowRelatedTopics();
                         e.Handled = true;
-                        
-                        this.DebugPrint("Item Details:", itemDetails);
                     }
                     break;
             }
