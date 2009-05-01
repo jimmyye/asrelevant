@@ -8,13 +8,6 @@ using System.Windows.Forms.Design;
 
 namespace OpenTheDoc
 {
-    public enum DocumentViewer
-    {
-        InternalBrowser,
-        SystemBrowser,
-        HelpContents
-    }
-
     [Serializable]
     public class Settings
     {
@@ -27,15 +20,16 @@ namespace OpenTheDoc
 
         const bool HANDLE_F1 = false;
         const bool OPEN_FIRST_TOPIC = false;
+        const Keys SHORTCUT = Keys.Control | Keys.F1;
+        const Keys SHORTCUT_HELP_PANEL = Keys.Shift | Keys.F1;
 
         private string[] docPaths = DOC_PATHS;
         private string[] toc = TOCS;
         private string homePage;
-        private DocumentViewer docViewer = DocumentViewer.HelpContents;
         private bool openFirstTopic = OPEN_FIRST_TOPIC;
         private bool handleF1 = HANDLE_F1;
-        private Keys shortcut = Keys.Control | Keys.F1;
-        private Keys shortcutHelpContents = Keys.Shift | Keys.F1;
+        private Keys shortcut = SHORTCUT;
+        private Keys shortcutHelpPanel = SHORTCUT_HELP_PANEL;
 
         #region Documentation
 
@@ -63,24 +57,12 @@ namespace OpenTheDoc
             set { homePage = value; }
         }
 
-        #endregion
-
-        #region Behavior
-
         [DisplayName("Open the first topic")]
-        [Category("Behavior"), Description("Automatically open the first available Related Topic."), DefaultValue(OPEN_FIRST_TOPIC)]
+        [Category("Documentation"), Description("Automatically open the first available Related Topic."), DefaultValue(OPEN_FIRST_TOPIC)]
         public Boolean OpenFirstTopic
         {
             get { return openFirstTopic; }
             set { openFirstTopic = value; }
-        }
-
-        [DisplayName("Open docs in")]
-        [Category("Behavior"), Description("The browser used to view documents."), DefaultValue(DocumentViewer.HelpContents)]
-        public DocumentViewer DocViewer
-        {
-            get { return docViewer; }
-            set { docViewer = value; }
         }
 
         #endregion
@@ -88,29 +70,29 @@ namespace OpenTheDoc
         #region Shortcuts
 
         [DisplayName("Shortcut")]
-        [Category("Shortcuts"), Description("Search the item at cursor position."), DefaultValue(Keys.Control | Keys.F1)]
+        [Category("Shortcuts"), Description("Resolve the element at cursor position and OpenTheDoc in HelpPanel. (API search)"), DefaultValue(SHORTCUT)]
         public Keys Shortcut
         {
-            get { return shortcut; }
+            get { return shortcut == Keys.None ? SHORTCUT : shortcut; }
             set { shortcut = value; }
         }
 
         [DisplayName("Handle F1")]
-        [Category("Shortcuts"), Description("If true, uses F1 for shortcut and the default action of FD will not happen."), DefaultValue(HANDLE_F1)]
+        [Category("Shortcuts"), Description("If true, uses F1 for API search and the default handler of FD will be suppressed."), DefaultValue(HANDLE_F1)]
         public Boolean HandleF1
         {
             get { return handleF1; }
             set { handleF1 = value; }
         }
 
-        [DisplayName("Shortcut for HelpContents")]
-        [Category("Shortcuts"), Description("Open HelpContents."), DefaultValue(Keys.Shift | Keys.F1)]
-        public Keys ShortcutHelpContents
+        [DisplayName("Shortcut for HelpPanel")]
+        [Category("Shortcuts"), Description("Open HelpPanel with HomePage."), DefaultValue(SHORTCUT_HELP_PANEL)]
+        public Keys ShortcutHelpPanel
         {
-            get { return shortcutHelpContents; }
-            set { shortcutHelpContents = value; }
+            get { return shortcutHelpPanel == Keys.None ? SHORTCUT_HELP_PANEL : shortcutHelpPanel; }
+            set { shortcutHelpPanel = value; }
         }
+
         #endregion
     }
-
 }

@@ -32,14 +32,11 @@ namespace OpenTheDoc
         private PluginUI pluginUI;
         private Image pluginImage;
 
-        private HelpContentsForm helpContents;
-        private Image helpContentsImage;
-        private FlashDevelop.Controls.Browser browser;          // html document browser
-        private DockContent document;                           // container for the browser
-        private List<NameValueCollection> relatedTopicsList;    // relatedTopicsList[i]: related topics in a book
+        private const string OPEN_THE_DOC = "OpenTheDoc";
+
         private Dictionary<string, Book> bookCache;             // <tocPath, book>
 
-        public string HomePage
+        internal string HomePage
         {
             get { return this.settingObject.HomePage; }
         }
@@ -125,210 +122,48 @@ namespace OpenTheDoc
         /// </summary>
         public void HandleEvent(Object sender, NotifyEvent e, HandlingPriority prority)
         {
-            // Handle custom "OpenTheDoc", and "ShowDocumentation" when HandleF1 is true.
             switch (e.Type)
             {
+                // Handle custom "OpenTheDoc", and "ShowDocumentation" when HandleF1 is true.
                 case EventType.Command:
                     string command = (e as DataEvent).Action;
                     bool handlingF1 = this.settingObject.HandleF1 && command == "ShowDocumentation";
 
                     if (command == "OpenTheDoc" || handlingF1)
                     {
+                        // Copy Hashtable to Dictionary<string,string> to avoid casting
                         Hashtable itemDetailsHashtable = (e as DataEvent).Data as Hashtable;
                         Dictionary<string, string> itemDetails = new Dictionary<string, string>();
+
                         foreach (DictionaryEntry item in itemDetailsHashtable)
                             itemDetails.Add(item.Key as string, item.Value as string);
-
                         this.DebugPrint("Item Details:", itemDetails);
 
-                        relatedTopicsList = new List<NameValueCollection>();
-                        NameValueCollection relatedTopics;  // relatedTopics in a book. The first item will be a group of the ListView
-                        NameValueCollection onlineDocs = null;  // The first item will be a group of the ListView
+                        // API Search
+                        List<SearchResult> resultList = this.APISearch(itemDetails);
+                        this.pluginUI.UpdateSearchResultList(resultList, !this.settingObject.OpenFirstTopic);
 
-                        bool isClass = itemDetails["ItmKind"] == "class";
-                        bool isFunction = itemDetails["ItmKind"] == "function";
-                        bool isTopLevelClass = itemDetails["ItmTypName"] == itemDetails["ItmTypPkgName"];
+                        string url = "";
+                        if (this.settingObject.OpenFirstTopic && resultList.Count > 0)
+                            url = resultList[0].filePath;
+                        this.OpenHelpPanel(url);
 
-                        string lang = PluginBase.CurrentProject.Language;
-                        this.DebugPrint("Project Language:", lang);
-
-                        #region Books with TOC
-                        foreach (Book book in this.GetBooks())
-                        {
-                            // Language detecting
-                            if (book.Categories.Count > 0 && !book.Categories.Contains(lang)) continue;
-
-                            XmlNode toc = book.Toc;
-                            string path = book.Path;
-
-                            relatedTopics = new NameValueCollection();
-                            relatedTopics.Add(path, XmlHelper.GetAttribute(toc, "label"));
-
-                            // Something like "Sprite" or "Sprite *", "*" can be anything: "Sprite[ *]"
-                            string formatString = "//*[@label='{0}' or starts-with(@label, '{0} ')]";
-                            string xpathBase = string.Format(formatString, itemDetails["ItmName"]);
-
-                            string xpath;
-                            XmlElement result;
-                            string file;
-
-                            if (!isClass)
-                            {
-                                string xpathItemTypName = string.Format(formatString, itemDetails["ItmTypName"]);
-                                // structures like: "Sprite[ *]//startDrag[ *]"
-                                xpath = xpathItemTypName + xpathBase;
-                                result = toc.SelectSingleNode(xpath) as XmlElement;
-
-                                if (result == null && isFunction)
-                                {
-                                    // structures like: "Sprite[ *]//startDrag()"  // AS3 Reference
-                                    xpath = string.Format("{0}//*[@label='{1}()']", xpathItemTypName, itemDetails["ItmName"]);
-                                    result = toc.SelectSingleNode(xpath) as XmlElement;
-                                }
-
-                                if (result == null)
-                                {
-                                    // structures like: "Sprite[ *]//[*]Sprite.startDrag[*]"  // AS2 Reference of some language (Chinese)
-                                    xpath = string.Format("{0}//*[contains(@label, '{1}.{2} ')]", xpathItemTypName, itemDetails["ItmTypName"], itemDetails["ItmName"]);
-                                    result = toc.SelectSingleNode(xpath) as XmlElement;
-                                }
-
-                                if (result != null)
-                                {
-                                    string href = result.GetAttribute("href");
-                                    file = Path.Combine(path, href);
-                                    relatedTopics.Add(file, string.Format("{0} ({1}.{0})", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]));
-
-                                    // Traces back to look for the ItmTpyName, that is its class
-                                    for (XmlElement n = result.ParentNode as XmlElement; n != null; n = n.ParentNode as XmlElement)
-                                    {
-                                        string label = n.GetAttribute("label");
-                                        if (!label.Contains(itemDetails["ItmTypName"])) continue;
-
-                                        href = n.GetAttribute("href");
-                                        file = Path.Combine(path, href);
-                                        formatString = "{0}" + (isTopLevelClass ? "" : " ({1})");
-                                        label = string.Format(formatString, itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]);
-                                        relatedTopics.Add(file, label);
-                                        break;
-                                    }
-                                }
-                            }
-                            // This item is a Class but not a Top Level Class
-                            else if (isClass && !isTopLevelClass)
-                            {
-                                // structures like: "flash.display[ *]//Sprite[ *]"
-                                xpath = string.Format(formatString, itemDetails["ItmTypPkg"]) + xpathBase;
-                                result = toc.SelectSingleNode(xpath) as XmlElement;
-
-                                if (result == null)
-                                {
-                                    // labels like: "Sprite (flash.display.Sprite)"  // AS2 Reference
-                                    xpath = string.Format("//*[@label='{0} ({1})']", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]);
-                                    result = toc.SelectSingleNode(xpath) as XmlElement;
-                                }
-
-                                if (result != null)
-                                {
-                                    string href = result.GetAttribute("href");
-                                    file = Path.Combine(path, href);
-                                    relatedTopics.Add(file, string.Format("{0} ({1})", itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]));
-
-                                    // Looks for constructors
-                                    xpath = string.Format("//*[starts-with(@label, '{0}')]", itemDetails["ItmName"]);
-                                    XmlNodeList results = result.Clone().SelectNodes(xpath);    // Xpath search from result.Clone(), it's root
-                                    if (results.Count != 0)
-                                    {
-                                        foreach (XmlElement node in results)
-                                        {
-                                            href = node.GetAttribute("href");
-                                            file = Path.Combine(path, href);
-                                            relatedTopics.Add(file, string.Format("{0} constructor", itemDetails["ItmTypName"]));
-                                        }
-                                    }
-                                }
-                            }
-                            // This item is a Top Level Class
-                            else if (isClass && isTopLevelClass)
-                            {
-                                // labels like: "Sprite[ *]" or "Sprite()" (AS3 Reference)
-                                formatString = "//*[@label='{0}' or starts-with(@label, '{0} ') or @label='{0}()']";
-                                xpath = string.Format(formatString, itemDetails["ItmName"]);
-                                XmlNodeList results = toc.SelectNodes(xpath);
-                                if (results.Count != 0)
-                                {
-                                    foreach (XmlElement node in results)
-                                    {
-                                        string href = node.GetAttribute("href");
-                                        file = Path.Combine(path, href);
-                                        if (relatedTopics[file] == null)
-                                        {
-                                            string parentLabel = (node.ParentNode as XmlElement).GetAttribute("label");
-                                            relatedTopics.Add(file, string.Format("{0} (@{1})", itemDetails["ItmTypName"], parentLabel));
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (relatedTopics.Count > 1)
-                            {
-                                this.relatedTopicsList.Add(relatedTopics);
-                                this.DebugPrint(string.Format("Xpath Select Results of {0}:", XmlHelper.GetAttribute(toc, "label")), relatedTopics);
-                            }
-                        }
-                        #endregion
-
-                        #region Well-Organized Books without TOC and On-line Documents
-                        foreach(string path in this.GetBooksWithoutToc())
-                        {
-                            string file;
-                            relatedTopics = null;
-                            if (path.ToLower().StartsWith("http"))
-                            {
-                                if (onlineDocs == null)
-                                {
-                                    onlineDocs = new NameValueCollection();
-                                    onlineDocs.Add(path, "On-line Help (Unknown Availability)");
-                                }
-                                file = new Uri(new Uri(path), itemDetails["ItmTypPkgNameURL"] + ".html").ToString();
-                                if (!isClass)
-                                    file = file + "#" + itemDetails["ItmName"] + (isFunction ? "()" : "");
-                                onlineDocs.Add(file, file);
-                            }
-                            else
-                            {
-                                file = Path.Combine(path, itemDetails["ItmTypPkgNamePath"] + ".html");
-                                if (!File.Exists(file)) continue;
-
-                                relatedTopics = new NameValueCollection();
-                                relatedTopics.Add(path, path);
-                                string classFile = file;
-                                if (!isClass)
-                                {
-                                    file = file + "#" + itemDetails["ItmName"] + (isFunction ? "()" : "");
-                                    relatedTopics.Add(new Uri(file).ToString(),
-                                        string.Format("{0} ({1}.{0})", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]));
-                                }
-                                
-                                string formatString = "{0}" + (isTopLevelClass ? "" : " ({1})");
-                                relatedTopics.Add(new Uri(classFile).ToString(),
-                                    string.Format(formatString, itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]));
-                            }
-
-                            if (relatedTopics != null) this.relatedTopicsList.Add(relatedTopics);
-                        }
-                        if (onlineDocs != null) this.relatedTopicsList.Add(onlineDocs);
-                        #endregion
-
-                        this.ShowRelatedTopics();
                         e.Handled = true;
                     }
                     break;
+
+                // Shortcut
+                case EventType.Keys:
+                    Keys key = (e as KeyEvent).Value;
+                    if (key == this.settingObject.Shortcut)
+                        this.OpenTheDoc();
+                    break;
             }
         }
+
         #endregion
 
-        #region Custom Methods
+        #region Common Methods
 
         /// <summary>
         /// Initializes important variables
@@ -339,7 +174,6 @@ namespace OpenTheDoc
             if (!Directory.Exists(dataPath)) Directory.CreateDirectory(dataPath);
             this.settingFilename = Path.Combine(dataPath, "Settings.fdb");
             this.pluginImage = PluginBase.MainForm.FindImage("222");
-            this.helpContentsImage = PluginBase.MainForm.FindImage("92");
         }
 
         /// <summary>
@@ -347,7 +181,8 @@ namespace OpenTheDoc
         /// </summary> 
         public void AddEventHandlers()
         {
-            EventManager.AddEventHandler(this, EventType.Command);
+            EventManager.AddEventHandler(this, EventType.Command | EventType.Keys);
+            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.Shortcut);
         }
 
         /// <summary>
@@ -380,12 +215,8 @@ namespace OpenTheDoc
         public void CreateMenuItem()
         {
             ToolStripMenuItem menu = (ToolStripMenuItem)PluginBase.MainForm.FindMenuItem("ViewMenu");
-            menu.DropDownItems.Add(new ToolStripMenuItem(LocaleHelper.GetString("Label.ViewMenuItem.PluginPanel"), this.pluginImage, new EventHandler(this.OpenDocPanel), this.settingObject.Shortcut));
-            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.Shortcut);
-
-            menu = (ToolStripMenuItem)PluginBase.MainForm.FindMenuItem("ViewMenu");
-            menu.DropDownItems.Add(new ToolStripMenuItem(LocaleHelper.GetString("Label.ViewMenuItem.HelpPanel"), this.helpContentsImage, new EventHandler(this.OpenHelpContentsHandler), this.settingObject.ShortcutHelpContents));
-            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.ShortcutHelpContents);
+            menu.DropDownItems.Add(new ToolStripMenuItem(LocaleHelper.GetString("Label.ViewMenuItem.PluginPanel"), this.pluginImage, new EventHandler(this.OpenHelpPanel), this.settingObject.ShortcutHelpPanel));
+            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.ShortcutHelpPanel);
         }
 
         /// <summary>
@@ -421,70 +252,40 @@ namespace OpenTheDoc
         }
 
         /// <summary>
-        /// Opens the plugin panel if closed and ends a "OpenTheDoc" action
+        /// Opens the plugin panel if closed
         /// </summary>
-        public void OpenDocPanel(Object sender, System.EventArgs e)
+        public void OpenHelpPanel(Object sender, System.EventArgs e)
+        {
+            this.pluginUI.Reset();
+            this.OpenHelpPanel(this.HomePage);
+        }
+
+        private void OpenHelpPanel(string url)
         {
             this.pluginPanel.Show();
             this.pluginPanel.BringToFront();
-            
+
+            this.pluginUI.OpenUrl(url);
+        }
+
+        // Resolve current element and call command "OpenTheDoc"
+        private void OpenTheDoc()
+        {
             ITabbedDocument doc = PluginBase.MainForm.CurrentDocument;
             // editor ready?
             if (doc == null) return;
+
             ScintillaNet.ScintillaControl sci = doc.IsEditable ? doc.SciControl : null;
-            if(sci!=null)
-            ASCompletion.Completion.ASComplete.ResolveElement(sci, "OpenTheDoc");
+            if (sci != null)
+                ASCompletion.Completion.ASComplete.ResolveElement(sci, OPEN_THE_DOC);
         }
 
-        /// <summary>
-        /// Opens the Help Panel if closed
-        /// </summary>
-        public void OpenHelpContentsHandler(Object sender, System.EventArgs e)
-        {
-            this.OpenHelpContents(this.HomePage);
-        }
+        #endregion
 
-        /// <summary>
-        /// Opens the Help Panel if closed
-        /// </summary>
-        public void OpenHelpContents(string url)
-        {
-            if (this.helpContents == null ||  this.helpContents.IsDisposed)
-                this.helpContents = new HelpContentsForm(this);
-            this.helpContents.Show();
-            this.helpContents.BringToFront();
+        #region Core Methods
 
-            if (url != null) this.helpContents.OpenUrl(url);
-        }
-
-        private void ShowRelatedTopics()
-        {
-            this.pluginUI.UpdateRelatedTopicsList(this.relatedTopicsList);
-            if (this.settingObject.OpenFirstTopic)
-            {
-                try
-                {
-                    string url = relatedTopicsList[0].GetKey(1);
-                    this.OpenUrl(url);
-                }
-                catch { return; }
-            }
-        }
-
-        internal void OpenUrl(string url)
-        {
-            url = url.Replace('?', '#');
-            if (this.settingObject.DocViewer == OpenTheDoc.DocumentViewer.InternalBrowser)
-                this.GetBrowser().WebBrowser.Navigate(url);
-            else if (this.settingObject.DocViewer == OpenTheDoc.DocumentViewer.SystemBrowser)
-                Process.Start(url);
-            else
-                this.OpenHelpContents(url);
-
-            this.DebugPrint("Doc Url:", url);
-        }
-
-        public List<Book> GetBooks()
+        // Get books those have TOC
+        internal List<Book> GetBooks()
         {
             List<Book> books = new List<Book>();
             if (this.bookCache == null)
@@ -517,7 +318,7 @@ namespace OpenTheDoc
             return books;
         }
 
-        public List<string> GetBooksWithoutToc()
+        internal List<string> GetBooksWithoutToc()
         {
             List<string> books = new List<string>();
             foreach (string docPath in this.settingObject.DocPaths)
@@ -546,18 +347,241 @@ namespace OpenTheDoc
             return books;
         }
 
-        private FlashDevelop.Controls.Browser GetBrowser()
+        internal List<SearchResult> APISearch(Dictionary<string, string> itemDetails)
         {
-            if (this.browser == null || this.browser.IsDisposed)
-            {
-                this.browser = new FlashDevelop.Controls.Browser();
-                this.browser.Dock = DockStyle.Fill;
-            }
-            if (this.document == null || this.document.IsDisposed)
-                this.document = PluginBase.MainForm.CreateCustomDocument(browser);
+            List<SearchResult> resultList = new List<SearchResult>();
 
-            this.browser.WebBrowser.ScriptErrorsSuppressed = true;
-            return this.browser;
+            bool isClass = itemDetails["ItmKind"] == "class";
+            bool isFunction = itemDetails["ItmKind"] == "function";
+            bool isTopLevelClass = itemDetails["ItmTypName"] == itemDetails["ItmTypPkgName"];
+
+            string lang = PluginBase.CurrentProject.Language;
+            this.DebugPrint("Project Language:", lang);
+
+            #region Books with TOC
+            foreach (Book book in this.GetBooks())
+            {
+                // Language detecting
+                if (book.Categories.Count > 0 && !book.Categories.Contains(lang)) continue;
+
+                // Something like "Sprite" or "Sprite *", "*" can be anything: "Sprite[ *]"
+                string formatString = "//*[@label='{0}' or starts-with(@label, '{0} ')]";
+                string xpathBase = string.Format(formatString, itemDetails["ItmName"]);
+                string xpath;
+                XmlElement result;
+
+                string filePath;
+                string label;
+
+                XmlNode toc = book.Toc;
+                string path = book.Path;
+
+                if (!isClass)
+                {
+                    string xpathItemTypName = string.Format(formatString, itemDetails["ItmTypName"]);
+                    // structures like: "Sprite[ *]//startDrag[ *]"
+                    xpath = xpathItemTypName + xpathBase;
+                    result = toc.SelectSingleNode(xpath) as XmlElement;
+
+                    if (result == null && isFunction)
+                    {
+                        // structures like: "Sprite[ *]//startDrag()"  // AS3 Reference
+                        xpath = string.Format("{0}//*[@label='{1}()']", xpathItemTypName, itemDetails["ItmName"]);
+                        result = toc.SelectSingleNode(xpath) as XmlElement;
+                    }
+
+                    if (result == null)
+                    {
+                        // structures like: "Sprite[ *]//[*]Sprite.startDrag[*]"  // AS2 Reference of some language (Chinese)
+                        xpath = string.Format("{0}//*[contains(@label, '{1}.{2} ')]", xpathItemTypName, itemDetails["ItmTypName"], itemDetails["ItmName"]);
+                        result = toc.SelectSingleNode(xpath) as XmlElement;
+                    }
+
+                    if (result != null)
+                    {
+                        string href = result.GetAttribute("href");
+                        filePath = Path.Combine(path, href);
+                        label = string.Format("{0} ({1}.{0})", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]);
+
+                        resultList.Add(new SearchResult(label, itemDetails["ItmKind"], "", book.Title, filePath));
+
+                        // Traces back to look for the ItmTpyName, that is its class
+                        for (XmlElement n = result.ParentNode as XmlElement; n != null; n = n.ParentNode as XmlElement)
+                        {
+                            label = n.GetAttribute("label");
+                            if (!label.Contains(itemDetails["ItmTypName"])) continue;
+
+                            href = n.GetAttribute("href");
+                            filePath = Path.Combine(path, href);
+                            formatString = "{0}" + (isTopLevelClass ? "" : " ({1})");
+                            label = string.Format(formatString, itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]);
+
+                            resultList.Add(new SearchResult(label, "class", "", book.Title, filePath));
+                            break;
+                        }
+                    }
+                }
+                // This item is a Class but not a Top Level Class
+                else if (isClass && !isTopLevelClass)
+                {
+                    // structures like: "flash.display[ *]//Sprite[ *]"
+                    xpath = string.Format(formatString, itemDetails["ItmTypPkg"]) + xpathBase;
+                    result = toc.SelectSingleNode(xpath) as XmlElement;
+
+                    if (result == null)
+                    {
+                        // labels like: "Sprite (flash.display.Sprite)"  // AS2 Reference
+                        xpath = string.Format("//*[@label='{0} ({1})']", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]);
+                        result = toc.SelectSingleNode(xpath) as XmlElement;
+                    }
+
+                    if (result != null)
+                    {
+                        string href = result.GetAttribute("href");
+                        filePath = Path.Combine(path, href);
+                        label = string.Format("{0} ({1})", itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]);
+
+                        resultList.Add(new SearchResult(label, itemDetails["ItmKind"], "", book.Title, filePath));
+
+                        // Looks for constructors
+                        xpath = string.Format("//*[starts-with(@label, '{0}')]", itemDetails["ItmName"]);
+                        XmlNodeList results = result.Clone().SelectNodes(xpath);    // Xpath search from result.Clone(), it's root
+                        if (results.Count != 0)
+                        {
+                            foreach (XmlElement node in results)
+                            {
+                                href = node.GetAttribute("href");
+                                filePath = Path.Combine(path, href);
+                                label = string.Format("{0} constructor", itemDetails["ItmTypName"]);
+
+                                resultList.Add(new SearchResult(label, "", "", book.Title, filePath));
+                            }
+                        }
+                    }
+                }
+                // This item is a Top Level Class
+                else if (isClass && isTopLevelClass)
+                {
+                    // labels like: "Sprite[ *]" or "Sprite()" (AS3 Reference)
+                    formatString = "//*[@label='{0}' or starts-with(@label, '{0} ') or @label='{0}()']";
+                    xpath = string.Format(formatString, itemDetails["ItmName"]);
+                    XmlNodeList results = toc.SelectNodes(xpath);
+
+                    List<string> tempList = new List<string>();
+                    if (results.Count != 0)
+                    {
+                        foreach (XmlElement node in results)
+                        {
+                            string href = node.GetAttribute("href");
+                            filePath = Path.Combine(path, href);
+                            if (!tempList.Contains(filePath))
+                            {
+                                string parentLabel = (node.ParentNode as XmlElement).GetAttribute("label");
+                                resultList.Add(new SearchResult(itemDetails["ItmTypName"], "", parentLabel, book.Title, filePath));
+                                tempList.Add(filePath);
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region Well-Organized Books without TOC and On-line Documents
+            foreach (string path in this.GetBooksWithoutToc())
+            {
+                string filePath;
+                string label;
+                if (path.ToLower().StartsWith("http"))
+                {
+                    filePath = new Uri(new Uri(path), itemDetails["ItmTypPkgNameURL"] + ".html").ToString();
+                    if (!isClass)
+                        filePath = filePath + "#" + itemDetails["ItmName"] + (isFunction ? "()" : "");
+
+                    resultList.Add(new SearchResult(filePath, "", "", "On-line Help (Unknown Availability)", filePath));
+                }
+                else
+                {
+                    filePath = Path.Combine(path, itemDetails["ItmTypPkgNamePath"] + ".html");
+                    if (!File.Exists(filePath)) continue;
+
+                    string classFilePath = filePath;
+                    if (!isClass)
+                    {
+                        filePath = filePath + "#" + itemDetails["ItmName"] + (isFunction ? "()" : "");
+                        label = string.Format("{0} ({1}.{0})", itemDetails["ItmName"], itemDetails["ItmTypPkgName"]);
+
+                        resultList.Add(new SearchResult(label, "", "", path, filePath));
+                    }
+
+                    string formatString = "{0}" + (isTopLevelClass ? "" : " ({1})");
+                    label = string.Format(formatString, itemDetails["ItmTypName"], itemDetails["ItmTypPkgName"]);
+
+                    resultList.Add(new SearchResult(label, "", "", path, classFilePath));
+                }
+            }
+            #endregion
+
+            return resultList;
+        }
+
+        internal List<SearchResult> TitleSearch(string text, bool contains, bool matchCase)
+        {
+            List<SearchResult> resultList = new List<SearchResult>();
+
+            // Build XPath according to options
+            string xpath;
+            System.Text.StringBuilder xpathStringFormat = new System.Text.StringBuilder("//*[");
+
+            if (contains) xpathStringFormat.Append("contains");
+            else xpathStringFormat.Append("starts-with");
+
+            if (matchCase)
+            {
+                xpathStringFormat.Append("(@label,'{0}')]");
+                xpath = String.Format(xpathStringFormat.ToString(), text);
+            }
+            else
+            {
+                xpathStringFormat.Append("(translate(@label,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '{0}')]");
+                xpath = String.Format(xpathStringFormat.ToString(), text.ToUpper());
+            }
+
+            foreach (Book book in this.GetBooks())
+            {
+                XmlNodeList results = book.Toc.SelectNodes(xpath);
+                if (results.Count == 0) continue;
+
+                List<string> tempList = new List<string>();
+                foreach (XmlElement node in results)
+                {
+                    string href = node.GetAttribute("href");
+                    string filePath = Path.Combine(book.Path, href);
+                    if (tempList.Contains(filePath)) continue;
+
+                    string label = node.GetAttribute("label");
+
+                    // Get parent node label and determine the type
+                    XmlElement parent = node.ParentNode as XmlElement;
+                    string parentLabel = parent.GetAttribute("label");
+                    string type = "";
+
+                    if (parentLabel.EndsWith("Properties") ||
+                        parentLabel.EndsWith("Constants") ||
+                        parentLabel.EndsWith("Methods") ||
+                        parentLabel.Equals("Styles") ||
+                        parentLabel.Equals("Events") ||
+                        parentLabel.Equals("Constructor"))
+                    {
+                        type = parentLabel;
+                        parentLabel = (parent.ParentNode as XmlElement).GetAttribute("label");
+                    }
+
+                    tempList.Add(filePath);
+                    resultList.Add(new SearchResult(label, type, parentLabel, book.Title, filePath));
+                }
+            }
+
+            return resultList;
         }
 
         #endregion
@@ -589,4 +613,24 @@ namespace OpenTheDoc
 
         #endregion
     }
+
+    #region Custom Structure
+    struct SearchResult
+    {
+        public string title;
+        public string type;
+        public string parentTitle;
+        public string bookTitle;
+        public string filePath;
+
+        public SearchResult( string title, string type, string parentTitle, string bookTitle, string filePath)
+        {
+            this.title = title;
+            this.type = type;
+            this.parentTitle = parentTitle;
+            this.bookTitle = bookTitle;
+            this.filePath = filePath;
+        }
+    }
+    #endregion
 }
