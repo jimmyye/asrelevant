@@ -9,6 +9,7 @@ using PluginCore.Managers;
 using System.IO;
 using System.Collections.Generic;
 using OpenTheDoc.Resources;
+using System.Drawing;
 
 namespace OpenTheDoc
 {
@@ -19,23 +20,65 @@ namespace OpenTheDoc
         private const int ICON_PAGE = 2;
 
         private ImageList imageList;
-        private ToolStrip toolStrip;
-        private ToolStripButton settingStripButton;
-        private ListView relatedTopicsListView;
         private PluginMain pluginMain;
+        private Browser browser;          // html document browser
 
-        private ListViewGroup defaultGroup;
+        private CheckBox matchCaseCheckBox;
+        private RadioButton containsRadioButton;
+        private RadioButton startsWithRadioButton;
+
+        private ToolStripControlHost matchCaseHost;
+        private ToolStripControlHost containsHost;
+        private ToolStripControlHost startsWithHost;
+
+        private bool isNodeClicked = false;
+
+        private ColumnHeader typeColumnHeader;
+        private StatusStrip statusStrip;
+        private ToolStripStatusLabel statusLabel;
+        private ColumnHeader titleColumnHeader;
+        private ColumnHeader parentColumnHeader;
+        private ListView searchResultListView;
+        private ColumnHeader bookColumnHeader;
+        private ToolStripSeparator toolStripSeparator2;
+        private ToolStripComboBox searchFieldComboBox;
+        private ToolStripButton toggleSearchResultButton;
+        private SplitContainer viewSplitContainer;
+        private ToolStripSeparator toolStripSeparator3;
+        private ToolStripButton collapseOthersStripButton;
+        private FixedTreeView contentTree;
+        private ToolStrip contentToolStrip;
+        private ToolStripLabel contentsLabel;
+        private ToolStripButton settingStripButton;
+        private ToolStripButton homePageToolStripButton;
         private ToolStripSeparator toolStripSeparator1;
-        private ToolStripButton helpContentsStripButton;
-        private ListViewItem infoNoTopicsFound;
+        private ToolStripButton refreshContentsStripButton;
+        private SplitContainer mainSplitContainer;
+        private ToolStrip searchToolStrip;
+        private ToolStripLabel titleSearchToolStripLabel;
 
         public PluginUI(PluginMain pluginMain)
         {
             this.InitializeComponent();
+            this.InitOtherComponent();
             this.InitializeGraphics();
             this.pluginMain = pluginMain;
-            this.InitializeTheOthers();
+
+            this.UpdateContentTree();
         }
+
+        private bool IsMatchCase
+        {
+            get { return this.matchCaseCheckBox.Checked; }
+            set { this.matchCaseCheckBox.Checked = value; }
+        }
+
+        private bool IsContains
+        {
+            get { return this.containsRadioButton.Checked; }
+            set { this.containsRadioButton.Checked = value; }
+        }
+
 
         #region Windows Forms Designer Generated Code
 
@@ -46,25 +89,112 @@ namespace OpenTheDoc
         /// </summary>
         private void InitializeComponent()
         {
-            this.toolStrip = new System.Windows.Forms.ToolStrip();
+            this.statusStrip = new System.Windows.Forms.StatusStrip();
+            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this.mainSplitContainer = new System.Windows.Forms.SplitContainer();
+            this.contentTree = new System.Windows.Forms.FixedTreeView();
+            this.contentToolStrip = new System.Windows.Forms.ToolStrip();
+            this.contentsLabel = new System.Windows.Forms.ToolStripLabel();
             this.settingStripButton = new System.Windows.Forms.ToolStripButton();
+            this.homePageToolStripButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.helpContentsStripButton = new System.Windows.Forms.ToolStripButton();
-            this.relatedTopicsListView = new System.Windows.Forms.ListView();
-            this.toolStrip.SuspendLayout();
+            this.refreshContentsStripButton = new System.Windows.Forms.ToolStripButton();
+            this.collapseOthersStripButton = new System.Windows.Forms.ToolStripButton();
+            this.viewSplitContainer = new System.Windows.Forms.SplitContainer();
+            this.searchResultListView = new System.Windows.Forms.ListView();
+            this.titleColumnHeader = new System.Windows.Forms.ColumnHeader();
+            this.typeColumnHeader = new System.Windows.Forms.ColumnHeader();
+            this.parentColumnHeader = new System.Windows.Forms.ColumnHeader();
+            this.bookColumnHeader = new System.Windows.Forms.ColumnHeader();
+            this.searchToolStrip = new System.Windows.Forms.ToolStrip();
+            this.searchFieldComboBox = new System.Windows.Forms.ToolStripComboBox();
+            this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.toggleSearchResultButton = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.titleSearchToolStripLabel = new System.Windows.Forms.ToolStripLabel();
+            this.statusStrip.SuspendLayout();
+            this.mainSplitContainer.Panel1.SuspendLayout();
+            this.mainSplitContainer.Panel2.SuspendLayout();
+            this.mainSplitContainer.SuspendLayout();
+            this.contentToolStrip.SuspendLayout();
+            this.viewSplitContainer.Panel1.SuspendLayout();
+            this.viewSplitContainer.SuspendLayout();
+            this.searchToolStrip.SuspendLayout();
             this.SuspendLayout();
             // 
-            // toolStrip
+            // statusStrip
             // 
-            this.toolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
-            this.toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.statusLabel});
+            this.statusStrip.Location = new System.Drawing.Point(0, 542);
+            this.statusStrip.Name = "statusStrip";
+            this.statusStrip.Size = new System.Drawing.Size(925, 22);
+            this.statusStrip.TabIndex = 0;
+            this.statusStrip.Text = "statusStrip";
+            // 
+            // statusLabel
+            // 
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Size = new System.Drawing.Size(35, 17);
+            this.statusLabel.Text = "Done";
+            // 
+            // mainSplitContainer
+            // 
+            this.mainSplitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.mainSplitContainer.Location = new System.Drawing.Point(0, 0);
+            this.mainSplitContainer.Name = "mainSplitContainer";
+            // 
+            // mainSplitContainer.Panel1
+            // 
+            this.mainSplitContainer.Panel1.Controls.Add(this.contentTree);
+            this.mainSplitContainer.Panel1.Controls.Add(this.contentToolStrip);
+            // 
+            // mainSplitContainer.Panel2
+            // 
+            this.mainSplitContainer.Panel2.Controls.Add(this.viewSplitContainer);
+            this.mainSplitContainer.Panel2.Controls.Add(this.searchToolStrip);
+            this.mainSplitContainer.Size = new System.Drawing.Size(925, 542);
+            this.mainSplitContainer.SplitterDistance = 231;
+            this.mainSplitContainer.TabIndex = 2;
+            // 
+            // contentTree
+            // 
+            this.contentTree.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.contentTree.FullRowSelect = true;
+            this.contentTree.HideSelection = false;
+            this.contentTree.Location = new System.Drawing.Point(0, 25);
+            this.contentTree.Name = "contentTree";
+            this.contentTree.ShowLines = false;
+            this.contentTree.ShowNodeToolTips = true;
+            this.contentTree.Size = new System.Drawing.Size(231, 517);
+            this.contentTree.TabIndex = 0;
+            this.contentTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.contentTree_BeforeExpand);
+            this.contentTree.BeforeCollapse += new System.Windows.Forms.TreeViewCancelEventHandler(this.contentTree_BeforeCollapse);
+            this.contentTree.NodeClicked += new System.Windows.Forms.FixedTreeView.NodeClickedHandler(this.nodeSelected);
+            // 
+            // contentToolStrip
+            // 
+            this.contentToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.contentToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.contentsLabel,
             this.settingStripButton,
+            this.homePageToolStripButton,
             this.toolStripSeparator1,
-            this.helpContentsStripButton});
-            this.toolStrip.Location = new System.Drawing.Point(0, 0);
-            this.toolStrip.Name = "toolStrip";
-            this.toolStrip.Size = new System.Drawing.Size(200, 25);
-            this.toolStrip.TabIndex = 0;
+            this.refreshContentsStripButton,
+            this.collapseOthersStripButton});
+            this.contentToolStrip.Location = new System.Drawing.Point(0, 0);
+            this.contentToolStrip.Name = "contentToolStrip";
+            this.contentToolStrip.Size = new System.Drawing.Size(231, 25);
+            this.contentToolStrip.TabIndex = 1;
+            // 
+            // contentsLabel
+            // 
+            this.contentsLabel.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.contentsLabel.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Bold);
+            this.contentsLabel.Name = "contentsLabel";
+            this.contentsLabel.Padding = new System.Windows.Forms.Padding(8, 0, 0, 0);
+            this.contentsLabel.Size = new System.Drawing.Size(69, 22);
+            this.contentsLabel.Text = "Contents";
             // 
             // settingStripButton
             // 
@@ -76,47 +206,165 @@ namespace OpenTheDoc
             this.settingStripButton.Text = "Show Settings...";
             this.settingStripButton.Click += new System.EventHandler(this.settingStripButton_Click);
             // 
+            // homePageToolStripButton
+            // 
+            this.homePageToolStripButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.homePageToolStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.homePageToolStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.homePageToolStripButton.Name = "homePageToolStripButton";
+            this.homePageToolStripButton.Size = new System.Drawing.Size(23, 22);
+            this.homePageToolStripButton.Text = "HomePage";
+            this.homePageToolStripButton.Click += new System.EventHandler(this.homePageToolStripButton_Click);
+            // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
             // 
-            // helpContentsStripButton
+            // refreshContentsStripButton
             // 
-            this.helpContentsStripButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
-            this.helpContentsStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.helpContentsStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.helpContentsStripButton.Name = "helpContentsStripButton";
-            this.helpContentsStripButton.Size = new System.Drawing.Size(23, 22);
-            this.helpContentsStripButton.Text = "Help Contents";
-            this.helpContentsStripButton.Click += new System.EventHandler(this.helpContentsStripButton_Click);
+            this.refreshContentsStripButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.refreshContentsStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.refreshContentsStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.refreshContentsStripButton.Name = "refreshContentsStripButton";
+            this.refreshContentsStripButton.Size = new System.Drawing.Size(23, 22);
+            this.refreshContentsStripButton.Text = "Refresh Contents";
+            this.refreshContentsStripButton.Click += new System.EventHandler(this.refreshContentsStripButton_Click);
             // 
-            // relatedTopicsListView
+            // collapseOthersStripButton
             // 
-            this.relatedTopicsListView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.relatedTopicsListView.HideSelection = false;
-            this.relatedTopicsListView.Location = new System.Drawing.Point(0, 25);
-            this.relatedTopicsListView.MultiSelect = false;
-            this.relatedTopicsListView.Name = "relatedTopicsListView";
-            this.relatedTopicsListView.ShowItemToolTips = true;
-            this.relatedTopicsListView.Size = new System.Drawing.Size(200, 275);
-            this.relatedTopicsListView.TabIndex = 1;
-            this.relatedTopicsListView.TileSize = new System.Drawing.Size(280, 20);
-            this.relatedTopicsListView.UseCompatibleStateImageBehavior = false;
-            this.relatedTopicsListView.View = System.Windows.Forms.View.Tile;
-            this.relatedTopicsListView.Resize += new System.EventHandler(this.relatedTopicsListView_Resize);
-            this.relatedTopicsListView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.relatedTopicsListView_MouseClick);
-            this.relatedTopicsListView.KeyUp += new System.Windows.Forms.KeyEventHandler(this.relatedTopicsListView_KeyUp);
+            this.collapseOthersStripButton.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.collapseOthersStripButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.collapseOthersStripButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.collapseOthersStripButton.Name = "collapseOthersStripButton";
+            this.collapseOthersStripButton.Size = new System.Drawing.Size(23, 22);
+            this.collapseOthersStripButton.Text = "Collapse Others";
+            this.collapseOthersStripButton.Click += new System.EventHandler(this.collapseOthersStripButton_Click);
+            // 
+            // viewSplitContainer
+            // 
+            this.viewSplitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.viewSplitContainer.Location = new System.Drawing.Point(0, 25);
+            this.viewSplitContainer.Name = "viewSplitContainer";
+            this.viewSplitContainer.Orientation = System.Windows.Forms.Orientation.Horizontal;
+            // 
+            // viewSplitContainer.Panel1
+            // 
+            this.viewSplitContainer.Panel1.Controls.Add(this.searchResultListView);
+            this.viewSplitContainer.Size = new System.Drawing.Size(690, 517);
+            this.viewSplitContainer.SplitterDistance = 107;
+            this.viewSplitContainer.TabIndex = 4;
+            // 
+            // searchResultListView
+            // 
+            this.searchResultListView.AllowColumnReorder = true;
+            this.searchResultListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.titleColumnHeader,
+            this.typeColumnHeader,
+            this.parentColumnHeader,
+            this.bookColumnHeader});
+            this.searchResultListView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.searchResultListView.FullRowSelect = true;
+            this.searchResultListView.GridLines = true;
+            this.searchResultListView.HideSelection = false;
+            this.searchResultListView.Location = new System.Drawing.Point(0, 0);
+            this.searchResultListView.MultiSelect = false;
+            this.searchResultListView.Name = "searchResultListView";
+            this.searchResultListView.ShowItemToolTips = true;
+            this.searchResultListView.Size = new System.Drawing.Size(690, 107);
+            this.searchResultListView.TabIndex = 0;
+            this.searchResultListView.UseCompatibleStateImageBehavior = false;
+            this.searchResultListView.View = System.Windows.Forms.View.Details;
+            this.searchResultListView.SelectedIndexChanged += new System.EventHandler(this.searchResultListView_SelectedIndexChanged);
+            // 
+            // titleColumnHeader
+            // 
+            this.titleColumnHeader.Text = "Title";
+            this.titleColumnHeader.Width = 250;
+            // 
+            // typeColumnHeader
+            // 
+            this.typeColumnHeader.Text = "Type";
+            this.typeColumnHeader.Width = 140;
+            // 
+            // parentColumnHeader
+            // 
+            this.parentColumnHeader.Text = "Parent";
+            this.parentColumnHeader.Width = 200;
+            // 
+            // bookColumnHeader
+            // 
+            this.bookColumnHeader.Text = "Book";
+            this.bookColumnHeader.Width = 250;
+            // 
+            // searchToolStrip
+            // 
+            this.searchToolStrip.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.searchToolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.searchFieldComboBox,
+            this.toolStripSeparator3,
+            this.toggleSearchResultButton,
+            this.toolStripSeparator2,
+            this.titleSearchToolStripLabel});
+            this.searchToolStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
+            this.searchToolStrip.Location = new System.Drawing.Point(0, 0);
+            this.searchToolStrip.Name = "searchToolStrip";
+            this.searchToolStrip.Size = new System.Drawing.Size(690, 25);
+            this.searchToolStrip.TabIndex = 3;
+            // 
+            // searchFieldComboBox
+            // 
+            this.searchFieldComboBox.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.searchFieldComboBox.Name = "searchFieldComboBox";
+            this.searchFieldComboBox.Size = new System.Drawing.Size(200, 25);
+            this.searchFieldComboBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.searchFieldComboBox_KeyPress);
+            // 
+            // toolStripSeparator3
+            // 
+            this.toolStripSeparator3.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right;
+            this.toolStripSeparator3.Name = "toolStripSeparator3";
+            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            // 
+            // toggleSearchResultButton
+            // 
+            this.toggleSearchResultButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.toggleSearchResultButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.toggleSearchResultButton.Name = "toggleSearchResultButton";
+            this.toggleSearchResultButton.Size = new System.Drawing.Size(23, 22);
+            this.toggleSearchResultButton.Text = "Toggle Search Result";
+            this.toggleSearchResultButton.Click += new System.EventHandler(this.toggleSearchResultButton_Click);
+            // 
+            // toolStripSeparator2
+            // 
+            this.toolStripSeparator2.Name = "toolStripSeparator2";
+            this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
+            // 
+            // titleSearchToolStripLabel
+            // 
+            this.titleSearchToolStripLabel.Name = "titleSearchToolStripLabel";
+            this.titleSearchToolStripLabel.Size = new System.Drawing.Size(68, 22);
+            this.titleSearchToolStripLabel.Text = "Title Search";
             // 
             // PluginUI
             // 
-            this.Controls.Add(this.relatedTopicsListView);
-            this.Controls.Add(this.toolStrip);
+            this.Controls.Add(this.mainSplitContainer);
+            this.Controls.Add(this.statusStrip);
             this.Name = "PluginUI";
-            this.Size = new System.Drawing.Size(200, 300);
-            this.toolStrip.ResumeLayout(false);
-            this.toolStrip.PerformLayout();
+            this.Size = new System.Drawing.Size(925, 564);
+            this.statusStrip.ResumeLayout(false);
+            this.statusStrip.PerformLayout();
+            this.mainSplitContainer.Panel1.ResumeLayout(false);
+            this.mainSplitContainer.Panel1.PerformLayout();
+            this.mainSplitContainer.Panel2.ResumeLayout(false);
+            this.mainSplitContainer.Panel2.PerformLayout();
+            this.mainSplitContainer.ResumeLayout(false);
+            this.contentToolStrip.ResumeLayout(false);
+            this.contentToolStrip.PerformLayout();
+            this.viewSplitContainer.Panel1.ResumeLayout(false);
+            this.viewSplitContainer.ResumeLayout(false);
+            this.searchToolStrip.ResumeLayout(false);
+            this.searchToolStrip.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -124,7 +372,51 @@ namespace OpenTheDoc
 
         #endregion
 
-        #region Methods and Event Handlers
+        #region Init
+
+        private void InitOtherComponent()
+        {
+            // 
+            // browser
+            // 
+            this.browser = new Browser();
+            this.browser.Dock = DockStyle.Fill;
+            this.browser.WebBrowser.WebBrowserShortcutsEnabled = true;
+            this.browser.WebBrowser.ScriptErrorsSuppressed = true;
+            this.browser.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
+            this.browser.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
+            // 
+            // matchCaseCheckBox
+            // 
+            this.matchCaseCheckBox = new CheckBox();
+            this.matchCaseCheckBox.Text = "Match Case";
+            this.matchCaseCheckBox.BackColor = Color.Transparent;
+            this.matchCaseHost = new ToolStripControlHost(this.matchCaseCheckBox);
+            this.matchCaseHost.Alignment = ToolStripItemAlignment.Right;
+            // 
+            // containsRadioButton
+            // 
+            this.containsRadioButton = new RadioButton();
+            this.containsRadioButton.Text = "Contains";
+            this.containsRadioButton.BackColor = Color.Transparent;
+            this.containsHost = new ToolStripControlHost(this.containsRadioButton);
+            this.containsHost.Alignment = ToolStripItemAlignment.Right;
+            // 
+            // startsWithRadioButton
+            // 
+            this.startsWithRadioButton = new RadioButton();
+            this.startsWithRadioButton.Text = "Starts With";
+            this.startsWithRadioButton.BackColor = Color.Transparent;
+            this.startsWithHost = new ToolStripControlHost(this.startsWithRadioButton);
+            this.startsWithHost.Alignment = ToolStripItemAlignment.Right;
+
+            this.viewSplitContainer.Panel2.Controls.Add(this.browser);
+
+            this.searchToolStrip.Items.Add(this.startsWithHost);
+            this.searchToolStrip.Items.Add(this.containsHost);
+            this.searchToolStrip.Items.Add(this.matchCaseHost);
+            this.IsContains = true;
+        }
 
         /// <summary>
         /// Initializes the used graphics
@@ -139,105 +431,292 @@ namespace OpenTheDoc
             this.imageList.Images.Add(PluginBase.MainForm.FindImage("275"));    // ICON_PAGE
             this.imageList.Images.Add(PluginBase.MainForm.FindImage("229"));    // infomation
             this.imageList.Images.Add(PluginBase.MainForm.FindImage("54"));     // setting
+            this.imageList.Images.Add(PluginBase.MainForm.FindImage("66"));     // refresh
+            this.imageList.Images.Add(PluginBase.MainForm.FindImage("275|9|3|2"));     // synchronize
+            this.imageList.Images.Add(PluginBase.MainForm.FindImage("47"));     // toggle search result
+            this.imageList.Images.Add(PluginBase.MainForm.FindImage("224"));     // home page
 
-            this.relatedTopicsListView.SmallImageList = this.imageList;
-            this.relatedTopicsListView.LargeImageList = this.imageList;
-
-            this.helpContentsStripButton.Image = this.imageList.Images[0];
+            this.contentTree.ImageList = this.imageList;
             this.settingStripButton.Image = this.imageList.Images[4];
+            this.refreshContentsStripButton.Image = this.imageList.Images[5];
+            this.collapseOthersStripButton.Image = this.imageList.Images[6];
+            this.toggleSearchResultButton.Image = this.imageList.Images[7];
+            this.homePageToolStripButton.Image = this.imageList.Images[8];
         }
 
-        private void InitializeTheOthers()
-        {
-            defaultGroup = new ListViewGroup("Related Topics");
-            this.infoNoTopicsFound = new ListViewItem(LocaleHelper.GetString("Info.NoTopicsFound"), 3, defaultGroup);
-            this.relatedTopicsListView.Groups.Add(defaultGroup);
-            this.relatedTopicsListView.Items.Add(this.infoNoTopicsFound);
-        }
+        #endregion
 
-        internal void UpdateRelatedTopicsList(List<System.Collections.Specialized.NameValueCollection> relatedTopicsList)
-        {
-            this.relatedTopicsListView.BeginUpdate();
-            this.relatedTopicsListView.Items.Clear();
+        #region ContentTree
 
-            if (relatedTopicsList == null || relatedTopicsList.Count == 0)
+        private void UpdateContentTree()
+        {
+            List<Book> books = this.pluginMain.GetBooks();
+
+            this.contentTree.BeginUpdate();
+            this.contentTree.Nodes.Clear();
+
+            foreach (Book book in books)
             {
-                this.infoNoTopicsFound.Group = defaultGroup;
-                this.relatedTopicsListView.Items.Add(this.infoNoTopicsFound);
+                TreeNode root = new TreeNode();
+                root.Text = root.Name = book.Title;
+                root.Tag = book.Path;
+
+                this.LoadChildNodes(root, book.Toc);
+                this.contentTree.Nodes.Add(root);
             }
-            else
+            this.contentTree.EndUpdate();
+        }
+
+        private void LoadChildNodes(TreeNode treeNode, XmlNode tocNode)
+        {
+            if (tocNode == null) return;
+            if (treeNode.Nodes.Count > 1) return;   // ChildNodes loaded
+            if (treeNode.Nodes.Count == 1 && treeNode.Nodes[0].Text != "Shows PlusMinus") return;   // ChildNodes loaded
+            treeNode.Nodes.Clear();
+
+            // Loads direct childNodes only, others will be loaded asynchronously
+            foreach (XmlNode node in tocNode)
             {
-                foreach (var relatedTopics in relatedTopicsList)
+                TreeNode tn = new TreeNode();
+                tn.Text = tn.Name = XmlHelper.GetAttribute(node, "label");
+                tn.Tag = node;
+                treeNode.Nodes.Add(tn);
+
+                if (node.HasChildNodes) tn.Nodes.Add("Shows PlusMinus");   // Makes this treeNode show the PlusMinus ("+", "-")
+                else
                 {
-                    var book = new ListViewGroup(relatedTopics.Get(0));
-                    relatedTopicsListView.Groups.Add(book);
-                    for (int i = 1; i < relatedTopics.Count; i++)
-                    {
-                        var topic = new ListViewItem(new string[] { relatedTopics.Get(i), relatedTopics.GetKey(i) }, ICON_PAGE, book);
-                        topic.Tag = relatedTopics.GetKey(i);
-                        relatedTopicsListView.Items.Add(topic);
-                    }
+                    tn.ImageIndex = ICON_PAGE;
+                    tn.SelectedImageIndex = ICON_PAGE;
                 }
             }
-
-            this.relatedTopicsListView.EndUpdate();
         }
 
-        private string GetSelectedTopicUrl()
+        private TreeNode getRoot(TreeNode node)
         {
-            if (relatedTopicsListView.SelectedItems.Count == 0) return null;
-            ListViewItem selectedTopic = this.relatedTopicsListView.SelectedItems[0];
-            return selectedTopic.Tag as string;
+            if (node == null) return null;
+            if (node.Level == 0) return node;
+
+            return this.getRoot(node.Parent);
         }
 
-        // Shows the plugin settings
+        private void nodeSelected(object sender, TreeNode node)
+        {
+            XmlElement xmlnode = node.Tag as XmlElement;
+            if (xmlnode == null) return;
+            if (xmlnode.GetAttribute("label") == string.Empty) return;
+
+            TreeNode root = this.getRoot(node);
+            if (root == node || root == null) return;
+
+            string href = xmlnode.GetAttribute("href");
+            if (href == string.Empty) return;
+
+            string docPath = root.Tag as string;
+            string url = Path.Combine(docPath, href);
+
+            isNodeClicked = true;
+            this.OpenUrl(url);
+            this.pluginMain.DebugPrint("Doc Url:", url);
+        }
+
+        private void contentTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            e.Node.ImageIndex = ICON_BOOK_OPEN;
+            e.Node.SelectedImageIndex = ICON_BOOK_OPEN;
+
+            this.LoadChildNodes(e.Node, e.Node.Tag as XmlNode); // Asynchronously
+        }
+
+        private void contentTree_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
+        {
+            e.Node.ImageIndex = ICON_BOOK_CLOSED;
+            e.Node.SelectedImageIndex = ICON_BOOK_CLOSED;
+        }
+
+        private void refreshContentsStripButton_Click(object sender, EventArgs e)
+        {
+            this.UpdateContentTree();
+        }
+
         private void settingStripButton_Click(object sender, EventArgs e)
         {
             PluginBase.MainForm.ShowSettingsDialog("OpenTheDoc");
         }
 
-        private void Open()
+        private void homePageToolStripButton_Click(object sender, EventArgs e)
         {
-            string selectedTopicUrl = this.GetSelectedTopicUrl();
-            if (selectedTopicUrl == null) return;
-            this.pluginMain.OpenUrl(selectedTopicUrl);
-        }
-        private void relatedTopicsListView_MouseClick(object sender, MouseEventArgs e)
-        {
-            if (e.Button == MouseButtons.Left) this.Open();
-        }
-        private void relatedTopicsListView_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter) this.Open();
-        }
-        private void openStripButton_Click(object sender, EventArgs e)
-        {
-            this.Open();
+            this.OpenUrl(this.pluginMain.HomePage);
         }
 
-        private void OpenInHelpContents()
+        private void collapseOthersStripButton_Click(object sender, EventArgs e)
         {
-            string selectedTopicUrl = this.GetSelectedTopicUrl();
-            if (selectedTopicUrl == null) return;
-            this.pluginMain.OpenHelpContents(selectedTopicUrl);
-        }
-        private void openInHelpContentsStripButton1_Click(object sender, EventArgs e)
-        {
-            this.OpenInHelpContents();
-        }
-
-        private void helpContentsStripButton_Click(object sender, EventArgs e)
-        {
-            this.pluginMain.OpenHelpContents(this.pluginMain.HomePage);
-        }
-
-        private void relatedTopicsListView_Resize(object sender, EventArgs e)
-        {
-            int width = this.relatedTopicsListView.Size.Width - 32;
-            if (width < 280) width = 280;
-            this.relatedTopicsListView.TileSize = new System.Drawing.Size(width, 20);
+            TreeNode currentNode = this.contentTree.SelectedNode;
+            this.contentTree.CollapseAll();
+            this.contentTree.SelectedNode = currentNode;
         }
 
         #endregion
+
+        #region Browser
+
+        internal void OpenUrl(string url)
+        {
+            this.browser.WebBrowser.Navigate(url);
+        }
+
+        private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
+        {
+            if (isNodeClicked)
+            {
+                isNodeClicked = false;
+                return;
+            }
+            try
+            {
+                string url = e.Url.ToString();
+                foreach (TreeNode node in contentTree.Nodes)
+                {
+                    string bookPath = new Uri(node.Tag as string).ToString();
+                    if (!url.ToLower().StartsWith(bookPath.ToLower())) continue;
+
+                    int startIndex = bookPath.Length;
+                    if (bookPath[bookPath.Length - 1] != '/') startIndex += 1;
+                    string href = url.Substring(startIndex);
+
+                    // Actually, any node is fine, because XPath always search from the root
+                    XmlNode toc = (node.Nodes[0].Tag as XmlNode).ParentNode;
+
+                    // Flex Toc uses '?' in href
+                    XmlNodeList results = toc.SelectNodes(string.Format("//*[@href='{0}' or @href='{1}']", href, href.Replace('#', '?')));
+
+                    // AS2 Referece of Flash will add "#"+Integer to the end of the href
+                    if (results.Count == 0) results = toc.SelectNodes(string.Format("//*[@href='{0}']", href.Split('#')[0]));
+                    if (results.Count == 0) continue;
+
+                    this.pluginMain.DebugPrint("result.Count: ", results.Count.ToString());
+                    List<string>[] fullPaths = new List<string>[results.Count];
+                    List<string> fullPath = null;
+                    for (int i = 0; i < results.Count; i++)
+                    {
+                        XmlNode xn = results[i];
+                        fullPath = new List<string>();
+                        for (XmlNode n = xn; n != toc.ParentNode; n = n.ParentNode)
+                            fullPath.Add(XmlHelper.GetAttribute(n, "label"));
+
+                        fullPath.Reverse();
+                        fullPaths[i] = fullPath;
+
+                        this.pluginMain.DebugPrint("fullPaths: ", string.Join("\\", fullPath.ToArray()));
+                    }
+
+                    // Find the nearest one to the selectedNode
+                    int index = 0;
+                    if (contentTree.SelectedNode != null)
+                    {
+                        string selectedNodeFullPath = contentTree.SelectedNode.FullPath;
+                        string[] snp = selectedNodeFullPath.Split('\\');
+                        this.pluginMain.DebugPrint("selectedNodeFullPath: ", selectedNodeFullPath);
+
+
+                        int[] commonCount = new int[fullPaths.Length];
+                        for (int i = 0; i < fullPaths.Length; i++)
+                        {
+                            var fp = fullPaths[i];
+                            for (int j = 0; j < fp.Count && j < snp.Length; j++)
+                            {
+                                if (fp[j].Equals(snp[j]))
+                                    commonCount[i]++;
+                            }
+                            if (commonCount[i] > commonCount[index])
+                                index = i;
+                        }
+                    }
+
+                    this.pluginMain.DebugPrint("result index: ", index.ToString());
+
+                    TreeNodeCollection c = contentTree.Nodes;
+                    TreeNode target = null;
+                    foreach (string step in fullPaths[index])
+                    {
+                        target = c[step];
+                        if (target == null) break;  // Not found
+
+                        this.LoadChildNodes(target, target.Tag as XmlNode); // Asynchronously
+                        c = target.Nodes;
+                    }
+
+                    if (target != null)
+                    {
+                        contentTree.SelectedNode = target;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorManager.ShowError(ex);
+            }
+        }
+
+        private void WebBrowser_StatusTextChanged(object sender, EventArgs e)
+        {
+            this.statusLabel.Text = this.browser.WebBrowser.StatusText;
+        }
+
+        #endregion
+
+        #region Search
+
+        private void searchResultListView_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (this.searchResultListView.SelectedItems.Count < 1) return;
+
+            string url = this.searchResultListView.SelectedItems[0].Tag as string;
+            OpenUrl(url);
+        }
+
+        private void toggleSearchResultButton_Click(object sender, EventArgs e)
+        {
+            this.viewSplitContainer.Panel1Collapsed = !this.viewSplitContainer.Panel1Collapsed;
+        }
+
+        private void searchFieldComboBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar != (Char)Keys.Return || this.searchFieldComboBox.Text.Trim() == "") return;
+            string sText = this.searchFieldComboBox.Text;
+
+            // search history list
+            if (!this.searchFieldComboBox.Items.Contains(sText))
+                this.searchFieldComboBox.Items.Insert(0, sText);
+            if (this.searchFieldComboBox.Items.Count > 5)
+                this.searchFieldComboBox.Items.RemoveAt(5);
+
+            this.UpdateSearchResultList(this.pluginMain.TitleSearch(sText, this.IsContains, this.IsMatchCase), true);
+            e.Handled = true;
+        }
+
+        internal void UpdateSearchResultList(List<SearchResult> resultList, bool showSearchResultListView)
+        {
+            this.searchResultListView.Items.Clear();
+            foreach (SearchResult r in resultList)
+            {
+                ListViewItem item = new ListViewItem(new string[] { r.title, r.type, r.parentTitle, r.bookTitle });
+                item.Tag = r.filePath;
+                this.searchResultListView.Items.Add(item);
+            }
+
+            this.viewSplitContainer.Panel1Collapsed = !showSearchResultListView;
+            if (showSearchResultListView)
+                this.searchResultListView.Focus();
+        }
+
+        #endregion
+
+        internal void Reset()
+        {
+            this.UpdateContentTree();
+            this.searchResultListView.Items.Clear();
+            this.viewSplitContainer.Panel1Collapsed = true;
+        }
     }
 }
