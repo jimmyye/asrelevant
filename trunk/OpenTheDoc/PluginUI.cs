@@ -382,6 +382,7 @@ namespace OpenTheDoc
             this.browser = new Browser();
             this.browser.Dock = DockStyle.Fill;
             this.browser.WebBrowser.WebBrowserShortcutsEnabled = true;
+            this.browser.WebBrowser.PreviewKeyDown += new PreviewKeyDownEventHandler(WebBrowser_PreviewKeyDown);
             this.browser.WebBrowser.ScriptErrorsSuppressed = true;
             this.browser.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
             this.browser.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
@@ -411,6 +412,7 @@ namespace OpenTheDoc
             this.startsWithHost.Alignment = ToolStripItemAlignment.Right;
 
             this.viewSplitContainer.Panel2.Controls.Add(this.browser);
+            this.viewSplitContainer.Panel1Collapsed = true;
 
             this.searchToolStrip.Items.Add(this.startsWithHost);
             this.searchToolStrip.Items.Add(this.containsHost);
@@ -661,6 +663,13 @@ namespace OpenTheDoc
         private void WebBrowser_StatusTextChanged(object sender, EventArgs e)
         {
             this.statusLabel.Text = this.browser.WebBrowser.StatusText;
+        }
+
+        // Hide HelpPanel when ShortcutHelpPanel is pressed
+        private void WebBrowser_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
+        {
+            if (e.KeyData == (this.pluginMain.Settings as Settings).ShortcutHelpPanel)
+                this.pluginMain.WindowVisible = false;
         }
 
         #endregion
