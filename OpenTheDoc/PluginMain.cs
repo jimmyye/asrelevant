@@ -227,6 +227,16 @@ namespace OpenTheDoc
             this.pluginUI = new PluginUI(this);
             this.pluginUI.Text = LocaleHelper.GetString("Title.PluginPanel");
             this.pluginPanel = PluginBase.MainForm.CreateDockablePanel(this.pluginUI, this.pluginGuid, this.pluginImage, DockState.DockRight);
+
+            this.pluginPanel.KeyPreview = true;
+            this.pluginPanel.KeyDown += new KeyEventHandler(pluginPanel_KeyDown);
+        }
+
+        // Hide HelpPanel when ShortcutHelpPanel is pressed
+        private void pluginPanel_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyData == this.settingObject.ShortcutHelpPanel)
+                this.WindowVisible = false;
         }
 
         /// <summary>
@@ -252,19 +262,27 @@ namespace OpenTheDoc
         }
 
         /// <summary>
-        /// Opens the plugin panel if closed
+        /// Opens the plugin panel if closed, else toggle visible
         /// </summary>
         public void OpenHelpPanel(Object sender, System.EventArgs e)
         {
-            this.pluginUI.Reset();
-            this.OpenHelpPanel(this.HomePage);
+            if (this.pluginPanel.IsHidden)
+            {
+                this.pluginUI.Reset();
+                this.OpenHelpPanel(this.HomePage);
+            }
+            else
+            {
+                this.WindowVisible = !this.WindowVisible;
+            }
         }
 
         private void OpenHelpPanel(string url)
         {
+            this.WindowVisible = true;
+
             this.pluginPanel.Show();
             this.pluginPanel.BringToFront();
-
             this.pluginUI.OpenUrl(url);
         }
 
@@ -280,6 +298,23 @@ namespace OpenTheDoc
                 ASCompletion.Completion.ASComplete.ResolveElement(sci, OPEN_THE_DOC);
         }
 
+        // Visibility of the window that holds HelpPanel
+        internal bool WindowVisible
+        {
+            get
+            {
+                if (this.pluginPanel.IsFloat)
+                    return this.pluginPanel.FloatPane.FloatWindow.Visible;
+                else
+                    return false;
+            }
+            set
+            {
+                if (this.pluginPanel.IsFloat)
+                    this.pluginPanel.FloatPane.FloatWindow.Visible = value;
+            }
+        }
+        
         #endregion
 
         #region Core Methods
