@@ -19,14 +19,16 @@ namespace OpenTheDoc
         static public string[] TOCS = { "otd_toc.xml", "help_toc.xml", "tocAPI.xml", "toc.xml" };
 
         const bool HANDLE_F1 = false;
-        const bool OPEN_FIRST_TOPIC = false;
+        const bool SHOW_API_SEARCH_RESULT = false;
+        const bool ALWAYS_OPEN_HELP_PANEL = false;
         const Keys SHORTCUT = Keys.Control | Keys.F1;
         const Keys SHORTCUT_HELP_PANEL = Keys.Shift | Keys.F1;
 
         private string[] docPaths = DOC_PATHS;
         private string[] toc = TOCS;
         private string homePage;
-        private bool openFirstTopic = OPEN_FIRST_TOPIC;
+        private bool showAPISearchResult = SHOW_API_SEARCH_RESULT;
+        private bool alwaysOpenHelpPanel = ALWAYS_OPEN_HELP_PANEL;
         private bool handleF1 = HANDLE_F1;
         private Keys shortcut = SHORTCUT;
         private Keys shortcutHelpPanel = SHORTCUT_HELP_PANEL;
@@ -57,12 +59,24 @@ namespace OpenTheDoc
             set { homePage = value; }
         }
 
-        [DisplayName("Open the first topic")]
-        [Category("Documentation"), Description("Automatically open the first available Related Topic."), DefaultValue(OPEN_FIRST_TOPIC)]
-        public Boolean OpenFirstTopic
+        #endregion
+
+        #region Behavior
+
+        [DisplayName("Show API Search Results")]
+        [Category("Behavior"), Description("Always show results after API Search."), DefaultValue(SHOW_API_SEARCH_RESULT)]
+        public Boolean ShowAPISearchResult
         {
-            get { return openFirstTopic; }
-            set { openFirstTopic = value; }
+            get { return showAPISearchResult; }
+            set { showAPISearchResult = value; }
+        }
+
+        [DisplayName("Always Open HelpPanel")]
+        [Category("Behavior"), Description("Always open HelpPanel even no API found in API Search."), DefaultValue(ALWAYS_OPEN_HELP_PANEL)]
+        public Boolean AlwaysOpenHelpPanel
+        {
+            get { return alwaysOpenHelpPanel; }
+            set { alwaysOpenHelpPanel = value; }
         }
 
         #endregion
@@ -70,7 +84,7 @@ namespace OpenTheDoc
         #region Shortcuts
 
         [DisplayName("Shortcut")]
-        [Category("Shortcuts"), Description("Resolve the element at cursor position and OpenTheDoc in HelpPanel. (API search)"), DefaultValue(SHORTCUT)]
+        [Category("Shortcuts"), Description("API search: Resolve the element at cursor position and OpenTheDoc in HelpPanel. Hide HelpPanel if it's floating and already focused (F1 has the same function)."), DefaultValue(SHORTCUT)]
         public Keys Shortcut
         {
             get { return shortcut == Keys.None ? SHORTCUT : shortcut; }
@@ -86,12 +100,22 @@ namespace OpenTheDoc
         }
 
         [DisplayName("Shortcut for HelpPanel")]
-        [Category("Shortcuts"), Description("Open HelpPanel with HomePage."), DefaultValue(SHORTCUT_HELP_PANEL)]
+        [Category("Shortcuts"), Description("Open HelpPanel with HomePage if closed, toggle visibility if it's floating, simply show if it's docking."), DefaultValue(SHORTCUT_HELP_PANEL)]
         public Keys ShortcutHelpPanel
         {
             get { return shortcutHelpPanel == Keys.None ? SHORTCUT_HELP_PANEL : shortcutHelpPanel; }
             set { shortcutHelpPanel = value; }
         }
+
+        #endregion
+
+        #region State Saving
+
+        [Browsable(false)]
+        public int MainSplitContainerSplitterDistance { get; set; }
+
+        [Browsable(false)]
+        public int ViewSplitContainerSplitterDistance { get; set; }
 
         #endregion
     }
