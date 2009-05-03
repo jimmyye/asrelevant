@@ -55,17 +55,20 @@ namespace OpenTheDoc
         private ToolStripButton refreshContentsStripButton;
         private SplitContainer mainSplitContainer;
         private ToolStrip searchToolStrip;
-        private ToolStripLabel titleSearchToolStripLabel;
+        private ToolStripLabel searchResultsToolStripLabel;
 
         public PluginUI(PluginMain pluginMain)
         {
+            this.pluginMain = pluginMain;
+
             this.InitializeComponent();
             this.InitOtherComponent();
             this.InitializeGraphics();
-            this.pluginMain = pluginMain;
 
             this.UpdateContentTree();
         }
+
+        #region Properties
 
         private bool IsMatchCase
         {
@@ -79,6 +82,17 @@ namespace OpenTheDoc
             set { this.containsRadioButton.Checked = value; }
         }
 
+        private Settings Settings
+        {
+            get { return this.pluginMain.Settings as Settings; }
+        }
+
+        private string SearchResultCount
+        {
+            set { this.searchResultsToolStripLabel.Text = "Search Results: " + value; }
+        }
+
+        #endregion
 
         #region Windows Forms Designer Generated Code
 
@@ -111,7 +125,7 @@ namespace OpenTheDoc
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.toggleSearchResultButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
-            this.titleSearchToolStripLabel = new System.Windows.Forms.ToolStripLabel();
+            this.searchResultsToolStripLabel = new System.Windows.Forms.ToolStripLabel();
             this.statusStrip.SuspendLayout();
             this.mainSplitContainer.Panel1.SuspendLayout();
             this.mainSplitContainer.Panel2.SuspendLayout();
@@ -141,6 +155,7 @@ namespace OpenTheDoc
             // mainSplitContainer
             // 
             this.mainSplitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.mainSplitContainer.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
             this.mainSplitContainer.Location = new System.Drawing.Point(0, 0);
             this.mainSplitContainer.Name = "mainSplitContainer";
             // 
@@ -245,6 +260,7 @@ namespace OpenTheDoc
             // viewSplitContainer
             // 
             this.viewSplitContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.viewSplitContainer.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
             this.viewSplitContainer.Location = new System.Drawing.Point(0, 25);
             this.viewSplitContainer.Name = "viewSplitContainer";
             this.viewSplitContainer.Orientation = System.Windows.Forms.Orientation.Horizontal;
@@ -306,7 +322,7 @@ namespace OpenTheDoc
             this.toolStripSeparator3,
             this.toggleSearchResultButton,
             this.toolStripSeparator2,
-            this.titleSearchToolStripLabel});
+            this.searchResultsToolStripLabel});
             this.searchToolStrip.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
             this.searchToolStrip.Location = new System.Drawing.Point(0, 0);
             this.searchToolStrip.Name = "searchToolStrip";
@@ -340,11 +356,11 @@ namespace OpenTheDoc
             this.toolStripSeparator2.Name = "toolStripSeparator2";
             this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
             // 
-            // titleSearchToolStripLabel
+            // searchResultsToolStripLabel
             // 
-            this.titleSearchToolStripLabel.Name = "titleSearchToolStripLabel";
-            this.titleSearchToolStripLabel.Size = new System.Drawing.Size(68, 22);
-            this.titleSearchToolStripLabel.Text = "Title Search";
+            this.searchResultsToolStripLabel.Name = "searchResultsToolStripLabel";
+            this.searchResultsToolStripLabel.Size = new System.Drawing.Size(88, 22);
+            this.searchResultsToolStripLabel.Text = "Search Results: ";
             // 
             // PluginUI
             // 
@@ -368,6 +384,12 @@ namespace OpenTheDoc
             this.ResumeLayout(false);
             this.PerformLayout();
 
+        }
+
+        internal void SaveState()
+        {
+            this.Settings.MainSplitContainerSplitterDistance = this.mainSplitContainer.SplitterDistance;
+            this.Settings.ViewSplitContainerSplitterDistance = this.viewSplitContainer.SplitterDistance;
         }
 
         #endregion
@@ -418,6 +440,10 @@ namespace OpenTheDoc
             this.searchToolStrip.Items.Add(this.containsHost);
             this.searchToolStrip.Items.Add(this.matchCaseHost);
             this.IsContains = true;
+
+            // Restore state
+            this.mainSplitContainer.SplitterDistance = this.Settings.MainSplitContainerSplitterDistance;
+            this.viewSplitContainer.SplitterDistance = this.Settings.ViewSplitContainerSplitterDistance;
         }
 
         /// <summary>
@@ -547,7 +573,7 @@ namespace OpenTheDoc
 
         private void homePageToolStripButton_Click(object sender, EventArgs e)
         {
-            this.OpenUrl(this.pluginMain.HomePage);
+            this.OpenUrl(this.Settings.HomePage);
         }
 
         private void collapseOthersStripButton_Click(object sender, EventArgs e)
@@ -665,10 +691,12 @@ namespace OpenTheDoc
             this.statusLabel.Text = this.browser.WebBrowser.StatusText;
         }
 
-        // Hide HelpPanel when ShortcutHelpPanel is pressed
+        // Hide HelpPanel when one of the shortcuts is pressed
         private void WebBrowser_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
-            if (e.KeyData == (this.pluginMain.Settings as Settings).ShortcutHelpPanel)
+            if (e.KeyData == this.Settings.ShortcutHelpPanel ||
+                e.KeyData == this.Settings.Shortcut ||
+                e.KeyData == Keys.F1)
                 this.pluginMain.WindowVisible = false;
         }
 
@@ -704,7 +732,7 @@ namespace OpenTheDoc
             e.Handled = true;
         }
 
-        internal void UpdateSearchResultList(List<SearchResult> resultList, bool showSearchResultListView)
+        internal void UpdateSearchResultList(List<SearchResult> resultList, bool showSearchResult)
         {
             this.searchResultListView.Items.Clear();
             foreach (SearchResult r in resultList)
@@ -713,9 +741,12 @@ namespace OpenTheDoc
                 item.Tag = r.filePath;
                 this.searchResultListView.Items.Add(item);
             }
+            this.SearchResultCount = resultList.Count.ToString();
 
-            this.viewSplitContainer.Panel1Collapsed = !showSearchResultListView;
-            if (showSearchResultListView)
+            this.viewSplitContainer.Panel1Collapsed = !showSearchResult;
+
+            // Only get focus when title search, maybe the brower get the focus when API search
+            if (showSearchResult)
                 this.searchResultListView.Focus();
         }
 

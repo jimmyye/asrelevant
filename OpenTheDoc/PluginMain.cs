@@ -24,7 +24,7 @@ namespace OpenTheDoc
         private String pluginName = "OpenTheDoc";
         private String pluginGuid = "9E4B09DE-2F48-441e-AC80-89AD74BBB250";
         private String pluginHelp = "http://www.flashdevelop.org/community/viewtopic.php?f=4&t=2318";
-        private String pluginDesc = "Open ASDocs for FlashDevelop 3.";
+        private String pluginDesc = "Open Documentations for FlashDevelop 3.";
         private String pluginAuth = "Jimmy Ye";
         private String settingFilename;
         private Settings settingObject;
@@ -35,11 +35,6 @@ namespace OpenTheDoc
         private const string OPEN_THE_DOC = "OpenTheDoc";
 
         private Dictionary<string, Book> bookCache;             // <tocPath, book>
-
-        internal string HomePage
-        {
-            get { return this.settingObject.HomePage; }
-        }
 
         #region Required Properties
 
@@ -114,6 +109,10 @@ namespace OpenTheDoc
         /// </summary>
         public void Dispose()
         {
+            // Close HelpPanel if not visible
+            if (this.pluginPanel.IsFloat && this.WindowVisible == false)
+                this.pluginPanel.Hide();
+
             this.SaveSettings();
         }
 
@@ -124,12 +123,10 @@ namespace OpenTheDoc
         {
             switch (e.Type)
             {
-                // Handle custom "OpenTheDoc", and "ShowDocumentation" when HandleF1 is true.
+                // Handle custom command "OpenTheDoc", API Search
                 case EventType.Command:
                     string command = (e as DataEvent).Action;
-                    bool handlingF1 = this.settingObject.HandleF1 && command == "ShowDocumentation";
-
-                    if (command == "OpenTheDoc" || handlingF1)
+                    if (command == "OpenTheDoc")
                     {
                         // Copy Hashtable to Dictionary<string,string> to avoid casting
                         Hashtable itemDetailsHashtable = (e as DataEvent).Data as Hashtable;
@@ -141,22 +138,27 @@ namespace OpenTheDoc
 
                         // API Search
                         List<SearchResult> resultList = this.APISearch(itemDetails);
-                        this.pluginUI.UpdateSearchResultList(resultList, !this.settingObject.OpenFirstTopic);
+                        this.pluginUI.UpdateSearchResultList(resultList, this.settingObject.ShowAPISearchResult);
 
-                        string url = "";
-                        if (this.settingObject.OpenFirstTopic && resultList.Count > 0)
-                            url = resultList[0].filePath;
-                        this.OpenHelpPanel(url);
-
+                        if (resultList.Count > 0)
+                            this.OpenHelpPanel(resultList[0].filePath);
+                        
                         e.Handled = true;
                     }
                     break;
 
-                // Shortcut
+                // When HandleF1, the default handler of FD will be suppressed
                 case EventType.Keys:
                     Keys key = (e as KeyEvent).Value;
-                    if (key == this.settingObject.Shortcut)
+                    if (key == this.settingObject.Shortcut || (this.settingObject.HandleF1 && key == Keys.F1))
+                    {
                         this.OpenTheDoc();
+                        if (this.settingObject.AlwaysOpenHelpPanel)
+                            this.OpenHelpPanel();
+
+                        e.Handled = true;
+                    }
+                    
                     break;
             }
         }
@@ -181,7 +183,7 @@ namespace OpenTheDoc
         /// </summary> 
         public void AddEventHandlers()
         {
-            EventManager.AddEventHandler(this, EventType.Command | EventType.Keys);
+            EventManager.AddEventHandler(this, EventType.Command | EventType.Keys, HandlingPriority.High);
             PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.Shortcut);
         }
 
@@ -227,15 +229,17 @@ namespace OpenTheDoc
             this.pluginUI = new PluginUI(this);
             this.pluginUI.Text = LocaleHelper.GetString("Title.PluginPanel");
             this.pluginPanel = PluginBase.MainForm.CreateDockablePanel(this.pluginUI, this.pluginGuid, this.pluginImage, DockState.DockRight);
-
+            
             this.pluginPanel.KeyPreview = true;
             this.pluginPanel.KeyDown += new KeyEventHandler(pluginPanel_KeyDown);
         }
 
-        // Hide HelpPanel when ShortcutHelpPanel is pressed
+        // Hide HelpPanel when one of the shortcuts is pressed
         private void pluginPanel_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyData == this.settingObject.ShortcutHelpPanel)
+            if (e.KeyData == this.settingObject.ShortcutHelpPanel ||
+                e.KeyData == this.settingObject.Shortcut ||
+                e.KeyData == Keys.F1)
                 this.WindowVisible = false;
         }
 
@@ -258,32 +262,41 @@ namespace OpenTheDoc
         /// </summary>
         public void SaveSettings()
         {
+            this.pluginUI.SaveState();
             ObjectSerializer.Serialize(this.settingFilename, this.settingObject);
         }
 
         /// <summary>
-        /// Opens the plugin panel if closed, else toggle visible
+        /// Opens the plugin panel if closed, else if IsFloat toggle visibility
         /// </summary>
         public void OpenHelpPanel(Object sender, System.EventArgs e)
         {
             if (this.pluginPanel.IsHidden)
             {
                 this.pluginUI.Reset();
-                this.OpenHelpPanel(this.HomePage);
+                this.OpenHelpPanel(this.settingObject.HomePage);
             }
             else
             {
-                this.WindowVisible = !this.WindowVisible;
+                if (this.pluginPanel.IsFloat)
+                    this.WindowVisible = !this.WindowVisible;
+                else
+                    this.OpenHelpPanel();
             }
         }
 
         private void OpenHelpPanel(string url)
         {
+            this.OpenHelpPanel();
+            this.pluginUI.OpenUrl(url);
+        }
+
+        private void OpenHelpPanel()
+        {
             this.WindowVisible = true;
 
             this.pluginPanel.Show();
             this.pluginPanel.BringToFront();
-            this.pluginUI.OpenUrl(url);
         }
 
         // Resolve current element and call command "OpenTheDoc"

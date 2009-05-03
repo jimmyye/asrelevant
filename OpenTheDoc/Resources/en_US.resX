@@ -133,7 +133,7 @@
     <value>Refresh</value>
   </data>
   <data name="Label.ViewMenuItem.PluginPanel" xml:space="preserve">
-    <value>OpenThe&amp;Doc Panel</value>
+    <value>&amp;Help Panel</value>
   </data>
   <data name="Title.PluginPanel" xml:space="preserve">
     <value>Help</value>
