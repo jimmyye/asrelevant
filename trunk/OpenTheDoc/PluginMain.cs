@@ -136,8 +136,11 @@ namespace OpenTheDoc
                             itemDetails.Add(item.Key as string, item.Value as string);
                         this.DebugPrint("Item Details:", itemDetails);
 
+                        string lang = PluginBase.CurrentProject.Language;
+                        this.DebugPrint("Project Language:", lang);
+
                         // API Search
-                        List<SearchResult> resultList = this.APISearch(itemDetails);
+                        List<SearchResult> resultList = this.APISearch(itemDetails, lang);
                         this.pluginUI.UpdateSearchResultList(resultList, this.settingObject.ShowAPISearchResult);
 
                         if (resultList.Count > 0)
@@ -332,13 +335,15 @@ namespace OpenTheDoc
 
         #region Core Methods
 
-        // Get books those have TOC
-        internal List<Book> GetBooks()
+        // Get books those have TOC, filter by category,
+        // including those have no categories if in !strict mode
+        // category==string.Empty means all categories
+        internal List<Book> GetBooks(string category, bool strict)
         {
             List<Book> books = new List<Book>();
             if (this.bookCache == null)
                 this.bookCache = new Dictionary<string, Book>();
-
+            
             foreach (string docPath in this.settingObject.DocPaths)
             {
                 if (!Directory.Exists(docPath) || docPath.ToLower().StartsWith("http"))
@@ -349,18 +354,26 @@ namespace OpenTheDoc
                     string tocPath = Path.Combine(docPath, toc);
                     if (!File.Exists(tocPath)) continue;
 
+                    Book book;
                     if (this.bookCache.ContainsKey(tocPath))
                     {
-                        books.Add(this.bookCache[tocPath]);
-                        this.DebugPrint("From cache. tocPath: ", tocPath);
-                        continue;
+                        book = this.bookCache[tocPath];
+                        this.DebugPrint("Load from cache. tocPath: ", tocPath);
+                    }
+                    else
+                    {
+                        book = BookHelper.MakeBook(docPath, toc);
+                        this.bookCache.Add(tocPath, book);
+                        this.DebugPrint("Book made. tocPath: ", tocPath);
                     }
 
-                    Book book = BookHelper.MakeBook(docPath, toc);
-                    books.Add(book);
-                    this.bookCache.Add(tocPath, book);
-
-                    this.DebugPrint("MakeBook. tocPath: ", tocPath);
+                    if (category == string.Empty || 
+                        book.Categories.Contains(category) || 
+                        (!strict && book.Categories.Count == 0))
+                    {
+                        books.Add(book);
+                        this.DebugPrint("Book added. tocPath: ", tocPath);
+                    }
                 }
             }
             return books;
@@ -395,7 +408,7 @@ namespace OpenTheDoc
             return books;
         }
 
-        internal List<SearchResult> APISearch(Dictionary<string, string> itemDetails)
+        internal List<SearchResult> APISearch(Dictionary<string, string> itemDetails, string category)
         {
             List<SearchResult> resultList = new List<SearchResult>();
 
@@ -403,15 +416,9 @@ namespace OpenTheDoc
             bool isFunction = itemDetails["ItmKind"] == "function";
             bool isTopLevelClass = itemDetails["ItmTypName"] == itemDetails["ItmTypPkgName"];
 
-            string lang = PluginBase.CurrentProject.Language;
-            this.DebugPrint("Project Language:", lang);
-
             #region Books with TOC
-            foreach (Book book in this.GetBooks())
+            foreach (Book book in this.GetBooks(category, false))
             {
-                // Language detecting
-                if (book.Categories.Count > 0 && !book.Categories.Contains(lang)) continue;
-
                 // Something like "Sprite" or "Sprite *", "*" can be anything: "Sprite[ *]"
                 string formatString = "//*[@label='{0}' or starts-with(@label, '{0} ')]";
                 string xpathBase = string.Format(formatString, itemDetails["ItmName"]);
@@ -572,7 +579,7 @@ namespace OpenTheDoc
             return resultList;
         }
 
-        internal List<SearchResult> TitleSearch(string text, bool contains, bool matchCase)
+        internal List<SearchResult> TitleSearch(string text, bool contains, bool matchCase, string category)
         {
             List<SearchResult> resultList = new List<SearchResult>();
 
@@ -594,7 +601,7 @@ namespace OpenTheDoc
                 xpath = String.Format(xpathStringFormat.ToString(), text.ToUpper());
             }
 
-            foreach (Book book in this.GetBooks())
+            foreach (Book book in this.GetBooks(category, true))
             {
                 XmlNodeList results = book.Toc.SelectNodes(xpath);
                 if (results.Count == 0) continue;
@@ -651,18 +658,11 @@ namespace OpenTheDoc
             TraceManager.Add(str);
         }
 
-        [Conditional("DEBUG")]
-        private void DebugPrint(string info, NameValueCollection nvc)
-        {
-            TraceManager.Add("\n" + info);
-            foreach (string key in nvc.AllKeys)
-                TraceManager.Add(key + ": " + nvc[key]);
-        }
-
         #endregion
     }
 
-    #region Custom Structure
+    #region Custom Classes and Structs
+
     struct SearchResult
     {
         public string title;
@@ -680,5 +680,32 @@ namespace OpenTheDoc
             this.filePath = filePath;
         }
     }
+
+    [Serializable]
+    public class Category
+    {
+        private string title = string.Empty;
+        private string keyword = string.Empty;
+
+        public Category() { }
+        public Category(string title, string keyword)
+        {
+            this.title = title;
+            this.keyword = keyword;
+        }
+
+        public string Title
+        {
+            get { return this.title; }
+            set { this.title = value; }
+        }
+
+        public string Keyword
+        {
+            get { return this.keyword; }
+            set { this.keyword = value; }
+        }
+    }
+
     #endregion
 }

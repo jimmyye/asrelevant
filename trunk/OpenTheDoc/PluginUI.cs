@@ -55,6 +55,7 @@ namespace OpenTheDoc
         private ToolStripButton refreshContentsStripButton;
         private SplitContainer mainSplitContainer;
         private ToolStrip searchToolStrip;
+        private ComboBox categoryComboBox;
         private ToolStripLabel searchResultsToolStripLabel;
 
         public PluginUI(PluginMain pluginMain)
@@ -62,10 +63,11 @@ namespace OpenTheDoc
             this.pluginMain = pluginMain;
 
             this.InitializeComponent();
-            this.InitOtherComponent();
+            this.InitComponent();
             this.InitializeGraphics();
 
-            this.UpdateContentTree();
+            this.Init();
+            
         }
 
         #region Properties
@@ -92,6 +94,18 @@ namespace OpenTheDoc
             set { this.searchResultsToolStripLabel.Text = "Search Results: " + value; }
         }
 
+        private Category SelectedCategory
+        {
+            get
+            {
+                return (this.categoryComboBox.SelectedItem as Category) ?? Settings.CATEGORIES[0]/*All Books*/;
+            }
+            set
+            {
+                this.categoryComboBox.SelectedItem = value;
+            }
+        }
+
         #endregion
 
         #region Windows Forms Designer Generated Code
@@ -106,6 +120,7 @@ namespace OpenTheDoc
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.mainSplitContainer = new System.Windows.Forms.SplitContainer();
+            this.categoryComboBox = new System.Windows.Forms.ComboBox();
             this.contentTree = new System.Windows.Forms.FixedTreeView();
             this.contentToolStrip = new System.Windows.Forms.ToolStrip();
             this.contentsLabel = new System.Windows.Forms.ToolStripLabel();
@@ -161,6 +176,7 @@ namespace OpenTheDoc
             // 
             // mainSplitContainer.Panel1
             // 
+            this.mainSplitContainer.Panel1.Controls.Add(this.categoryComboBox);
             this.mainSplitContainer.Panel1.Controls.Add(this.contentTree);
             this.mainSplitContainer.Panel1.Controls.Add(this.contentToolStrip);
             // 
@@ -172,16 +188,29 @@ namespace OpenTheDoc
             this.mainSplitContainer.SplitterDistance = 231;
             this.mainSplitContainer.TabIndex = 2;
             // 
+            // categoryComboBox
+            // 
+            this.categoryComboBox.DisplayMember = "Title";
+            this.categoryComboBox.Dock = System.Windows.Forms.DockStyle.Top;
+            this.categoryComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.categoryComboBox.Location = new System.Drawing.Point(0, 25);
+            this.categoryComboBox.Name = "categoryComboBox";
+            this.categoryComboBox.Size = new System.Drawing.Size(231, 21);
+            this.categoryComboBox.TabIndex = 2;
+            this.categoryComboBox.SelectedIndexChanged += new System.EventHandler(this.categoryComboBox_SelectedIndexChanged);
+            // 
             // contentTree
             // 
-            this.contentTree.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.contentTree.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                        | System.Windows.Forms.AnchorStyles.Left)
+                        | System.Windows.Forms.AnchorStyles.Right)));
             this.contentTree.FullRowSelect = true;
             this.contentTree.HideSelection = false;
-            this.contentTree.Location = new System.Drawing.Point(0, 25);
+            this.contentTree.Location = new System.Drawing.Point(0, 45);
             this.contentTree.Name = "contentTree";
             this.contentTree.ShowLines = false;
             this.contentTree.ShowNodeToolTips = true;
-            this.contentTree.Size = new System.Drawing.Size(231, 517);
+            this.contentTree.Size = new System.Drawing.Size(231, 499);
             this.contentTree.TabIndex = 0;
             this.contentTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.contentTree_BeforeExpand);
             this.contentTree.BeforeCollapse += new System.Windows.Forms.TreeViewCancelEventHandler(this.contentTree_BeforeCollapse);
@@ -386,17 +415,11 @@ namespace OpenTheDoc
 
         }
 
-        internal void SaveState()
-        {
-            this.Settings.MainSplitContainerSplitterDistance = this.mainSplitContainer.SplitterDistance;
-            this.Settings.ViewSplitContainerSplitterDistance = this.viewSplitContainer.SplitterDistance;
-        }
-
         #endregion
 
         #region Init
 
-        private void InitOtherComponent()
+        private void InitComponent()
         {
             // 
             // browser
@@ -440,10 +463,6 @@ namespace OpenTheDoc
             this.searchToolStrip.Items.Add(this.containsHost);
             this.searchToolStrip.Items.Add(this.matchCaseHost);
             this.IsContains = true;
-
-            // Restore state
-            this.mainSplitContainer.SplitterDistance = this.Settings.MainSplitContainerSplitterDistance;
-            this.viewSplitContainer.SplitterDistance = this.Settings.ViewSplitContainerSplitterDistance;
         }
 
         /// <summary>
@@ -472,13 +491,21 @@ namespace OpenTheDoc
             this.homePageToolStripButton.Image = this.imageList.Images[8];
         }
 
+        // Initializes and restores
+        private void Init()
+        {
+            this.categoryComboBox.Items.AddRange(this.Settings.Categories.ToArray());
+            RestoreState();
+            this.UpdateContentTree();
+        }
+
         #endregion
 
-        #region ContentTree
+        #region Contents
 
         private void UpdateContentTree()
         {
-            List<Book> books = this.pluginMain.GetBooks();
+            List<Book> books = this.pluginMain.GetBooks(this.SelectedCategory.Keyword, true);
 
             this.contentTree.BeginUpdate();
             this.contentTree.Nodes.Clear();
@@ -547,61 +574,11 @@ namespace OpenTheDoc
             this.pluginMain.DebugPrint("Doc Url:", url);
         }
 
-        private void contentTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        // Select a tree node according to the url
+        private void SelectTreeNodeByUrl(string url)
         {
-            e.Node.ImageIndex = ICON_BOOK_OPEN;
-            e.Node.SelectedImageIndex = ICON_BOOK_OPEN;
-
-            this.LoadChildNodes(e.Node, e.Node.Tag as XmlNode); // Asynchronously
-        }
-
-        private void contentTree_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
-        {
-            e.Node.ImageIndex = ICON_BOOK_CLOSED;
-            e.Node.SelectedImageIndex = ICON_BOOK_CLOSED;
-        }
-
-        private void refreshContentsStripButton_Click(object sender, EventArgs e)
-        {
-            this.UpdateContentTree();
-        }
-
-        private void settingStripButton_Click(object sender, EventArgs e)
-        {
-            PluginBase.MainForm.ShowSettingsDialog("OpenTheDoc");
-        }
-
-        private void homePageToolStripButton_Click(object sender, EventArgs e)
-        {
-            this.OpenUrl(this.Settings.HomePage);
-        }
-
-        private void collapseOthersStripButton_Click(object sender, EventArgs e)
-        {
-            TreeNode currentNode = this.contentTree.SelectedNode;
-            this.contentTree.CollapseAll();
-            this.contentTree.SelectedNode = currentNode;
-        }
-
-        #endregion
-
-        #region Browser
-
-        internal void OpenUrl(string url)
-        {
-            this.browser.WebBrowser.Navigate(url);
-        }
-
-        private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
-        {
-            if (isNodeClicked)
-            {
-                isNodeClicked = false;
-                return;
-            }
             try
             {
-                string url = e.Url.ToString();
                 foreach (TreeNode node in contentTree.Nodes)
                 {
                     string bookPath = new Uri(node.Tag as string).ToString();
@@ -686,12 +663,74 @@ namespace OpenTheDoc
             }
         }
 
+        private void contentTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            e.Node.ImageIndex = ICON_BOOK_OPEN;
+            e.Node.SelectedImageIndex = ICON_BOOK_OPEN;
+
+            this.LoadChildNodes(e.Node, e.Node.Tag as XmlNode); // Asynchronously
+        }
+
+        private void contentTree_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
+        {
+            e.Node.ImageIndex = ICON_BOOK_CLOSED;
+            e.Node.SelectedImageIndex = ICON_BOOK_CLOSED;
+        }
+
+        private void refreshContentsStripButton_Click(object sender, EventArgs e)
+        {
+            this.UpdateContentTree();
+        }
+
+        private void settingStripButton_Click(object sender, EventArgs e)
+        {
+            PluginBase.MainForm.ShowSettingsDialog("OpenTheDoc");
+        }
+
+        private void homePageToolStripButton_Click(object sender, EventArgs e)
+        {
+            this.OpenUrl(this.Settings.HomePage);
+        }
+
+        private void collapseOthersStripButton_Click(object sender, EventArgs e)
+        {
+            TreeNode currentNode = this.contentTree.SelectedNode;
+            this.contentTree.CollapseAll();
+            this.contentTree.SelectedNode = currentNode;
+        }
+
+        private void categoryComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            this.UpdateContentTree();
+            // TODO: Restore selected node
+        }
+
+        #endregion
+
+        #region Browser
+
+        internal void OpenUrl(string url)
+        {
+            this.browser.WebBrowser.Navigate(url);
+        }
+
+        private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
+        {
+            if (isNodeClicked)
+            {
+                isNodeClicked = false;
+                return;
+            }
+            
+            SelectTreeNodeByUrl(e.Url.ToString());
+        }
+
         private void WebBrowser_StatusTextChanged(object sender, EventArgs e)
         {
             this.statusLabel.Text = this.browser.WebBrowser.StatusText;
         }
 
-        // Hide HelpPanel when one of the shortcuts is pressed
+        // Hide HelpPanel when one of the shortcuts is pressed when WebBrowser is focused
         private void WebBrowser_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             if (e.KeyData == this.Settings.ShortcutHelpPanel ||
@@ -704,6 +743,7 @@ namespace OpenTheDoc
 
         #region Search
 
+        // Open a topic selected in search results
         private void searchResultListView_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (this.searchResultListView.SelectedItems.Count < 1) return;
@@ -717,6 +757,7 @@ namespace OpenTheDoc
             this.viewSplitContainer.Panel1Collapsed = !this.viewSplitContainer.Panel1Collapsed;
         }
 
+        // Begins title search when "Enter" is pressed
         private void searchFieldComboBox_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (e.KeyChar != (Char)Keys.Return || this.searchFieldComboBox.Text.Trim() == "") return;
@@ -728,11 +769,13 @@ namespace OpenTheDoc
             if (this.searchFieldComboBox.Items.Count > 5)
                 this.searchFieldComboBox.Items.RemoveAt(5);
 
-            this.UpdateSearchResultList(this.pluginMain.TitleSearch(sText, this.IsContains, this.IsMatchCase), true);
+            List<SearchResult> resultList = this.pluginMain.TitleSearch(sText, this.IsContains, this.IsMatchCase, this.SelectedCategory.Keyword);
+            this.UpdateSearchResultList(resultList, true);
+            this.searchResultListView.Focus();
             e.Handled = true;
         }
 
-        internal void UpdateSearchResultList(List<SearchResult> resultList, bool showSearchResult)
+        internal void UpdateSearchResultList(List<SearchResult> resultList, bool showSearchResults)
         {
             this.searchResultListView.Items.Clear();
             foreach (SearchResult r in resultList)
@@ -743,20 +786,34 @@ namespace OpenTheDoc
             }
             this.SearchResultCount = resultList.Count.ToString();
 
-            this.viewSplitContainer.Panel1Collapsed = !showSearchResult;
-
-            // Only get focus when title search, maybe the brower get the focus when API search
-            if (showSearchResult)
-                this.searchResultListView.Focus();
+            this.viewSplitContainer.Panel1Collapsed = !showSearchResults;
         }
 
         #endregion
 
+        #region State
+
         internal void Reset()
         {
             this.UpdateContentTree();
-            this.searchResultListView.Items.Clear();
-            this.viewSplitContainer.Panel1Collapsed = true;
+            this.UpdateSearchResultList(new List<SearchResult>(), false);
         }
+
+        // Call by PluginMain.SaveSettings()
+        internal void SaveState()
+        {
+            this.Settings.MainSplitContainerSplitterDistance = this.mainSplitContainer.SplitterDistance;
+            this.Settings.ViewSplitContainerSplitterDistance = this.viewSplitContainer.SplitterDistance;
+            this.Settings.SelectedCategory = this.SelectedCategory;
+        }
+
+        private void RestoreState()
+        {
+            this.mainSplitContainer.SplitterDistance = this.Settings.MainSplitContainerSplitterDistance;
+            this.viewSplitContainer.SplitterDistance = this.Settings.ViewSplitContainerSplitterDistance;
+            this.SelectedCategory = this.Settings.SelectedCategory;
+        }
+
+        #endregion
     }
 }
