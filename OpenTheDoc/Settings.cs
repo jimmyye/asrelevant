@@ -11,12 +11,28 @@ namespace OpenTheDoc
     [Serializable]
     public class Settings
     {
-        static public string[] DOC_PATHS = new string[]{
+        static public string[] DOC_PATHS = new string[]
+        {
             @"C:\Program Files\Adobe\Flex Builder 3\doc",
             @"C:\Documents and Settings\All Users\Application Data\Adobe\Flash CS3\en\Configuration\HelpPanel\Help\ActionScriptLangRefV3",
         };
 
         static public string[] TOCS = { "otd_toc.xml", "help_toc.xml", "tocAPI.xml", "toc.xml" };
+
+        static public List<Category> CATEGORIES = new List<Category>() 
+        {
+            new Category("All Books", ""), 
+            new Category("Features", "flashfeatures"), 
+            new Category("ActionScript 2.0", "as2"), 
+            new Category("ActionScript 3.0", "as3"), 
+            new Category("ActionScript 2.0 Components", "components2"), 
+            new Category("ActionScript 3.0 Components", "components3"), 
+            new Category("Extending", "extending"), 
+            new Category("Language References (ActionScript & Components)", "languagereferences"), 
+            new Category("Flash Lite 1.x", "flashlite1"), 
+            new Category("Flash Lite 2.x", "flashlite2"), 
+            new Category("3rd Party", "3rdparty")
+        };
 
         const bool HANDLE_F1 = false;
         const bool SHOW_API_SEARCH_RESULT = false;
@@ -26,6 +42,7 @@ namespace OpenTheDoc
 
         private string[] docPaths = DOC_PATHS;
         private string[] toc = TOCS;
+        private List<Category> categories = new List<Category>(CATEGORIES);
         private string homePage;
         private bool showAPISearchResult = SHOW_API_SEARCH_RESULT;
         private bool alwaysOpenHelpPanel = ALWAYS_OPEN_HELP_PANEL;
@@ -47,7 +64,7 @@ namespace OpenTheDoc
         [Category("Documentation"), Description("File name of TOC. There can be more than one TOC file in a folder.")]
         public string[] TOC
         {
-            get { return toc == null ? TOCS : toc; }
+            get { return toc ?? TOCS; }
             set { toc = value; }
         }
 
@@ -57,6 +74,14 @@ namespace OpenTheDoc
         {
             get { return homePage; }
             set { homePage = value; }
+        }
+
+        [DisplayName("Categories")]
+        [Category("Documentation"), Description("Categorize docs by attribute \"categories\" of root node of TOC file. Title Search only search the selected category of books.")]
+        public List<Category> Categories
+        {
+            get { return categories ?? (categories = new List<Category>(CATEGORIES)); }
+            set { categories = value; }
         }
 
         #endregion
@@ -111,11 +136,30 @@ namespace OpenTheDoc
 
         #region State Saving
 
-        [Browsable(false)]
-        public int MainSplitContainerSplitterDistance { get; set; }
+        private int mainSplitContainerSplitterDistance;
+        private int viewSplitContainerSplitterDistance;
+        private Category selectedCategory;
 
         [Browsable(false)]
-        public int ViewSplitContainerSplitterDistance { get; set; }
+        public int MainSplitContainerSplitterDistance
+        {
+            get { return this.mainSplitContainerSplitterDistance == 0 ? 250 : this.mainSplitContainerSplitterDistance; }
+            set { this.mainSplitContainerSplitterDistance = value; }
+        }
+
+        [Browsable(false)]
+        public int ViewSplitContainerSplitterDistance
+        {
+            get { return this.viewSplitContainerSplitterDistance == 0 ? 100 : this.viewSplitContainerSplitterDistance; }
+            set { this.viewSplitContainerSplitterDistance = value; }
+        }
+
+        [Browsable(false)]
+        public Category SelectedCategory
+        {
+            get { return this.selectedCategory; }
+            set { this.selectedCategory = value; }
+        }
 
         #endregion
     }
