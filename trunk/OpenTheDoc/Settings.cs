@@ -143,22 +143,22 @@ namespace OpenTheDoc
         [Browsable(false)]
         public int MainSplitContainerSplitterDistance
         {
-            get { return this.mainSplitContainerSplitterDistance == 0 ? 250 : this.mainSplitContainerSplitterDistance; }
-            set { this.mainSplitContainerSplitterDistance = value; }
+            get { return mainSplitContainerSplitterDistance == 0 ? 250 : mainSplitContainerSplitterDistance; }
+            set { mainSplitContainerSplitterDistance = value; }
         }
 
         [Browsable(false)]
         public int ViewSplitContainerSplitterDistance
         {
-            get { return this.viewSplitContainerSplitterDistance == 0 ? 100 : this.viewSplitContainerSplitterDistance; }
-            set { this.viewSplitContainerSplitterDistance = value; }
+            get { return viewSplitContainerSplitterDistance == 0 ? 100 : viewSplitContainerSplitterDistance; }
+            set { viewSplitContainerSplitterDistance = value; }
         }
 
         [Browsable(false)]
         public Category SelectedCategory
         {
-            get { return this.selectedCategory; }
-            set { this.selectedCategory = value; }
+            get { return selectedCategory; }
+            set { selectedCategory = value; }
         }
 
         #endregion

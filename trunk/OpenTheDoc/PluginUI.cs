@@ -494,7 +494,7 @@ namespace OpenTheDoc
         // Initializes and restores
         private void Init()
         {
-            this.categoryComboBox.Items.AddRange(this.Settings.Categories.ToArray());
+            this.UpateCategoryComboBox();
             RestoreState();
             this.UpdateContentTree();
         }
@@ -575,7 +575,7 @@ namespace OpenTheDoc
         }
 
         // Select a tree node according to the url
-        private void SelectTreeNodeByUrl(string url)
+        private void SelectTreeNode(string url)
         {
             try
             {
@@ -679,6 +679,8 @@ namespace OpenTheDoc
 
         private void refreshContentsStripButton_Click(object sender, EventArgs e)
         {
+            this.pluginMain.UpdateBookCache();
+            this.UpateCategoryComboBox();
             this.UpdateContentTree();
         }
 
@@ -697,6 +699,14 @@ namespace OpenTheDoc
             TreeNode currentNode = this.contentTree.SelectedNode;
             this.contentTree.CollapseAll();
             this.contentTree.SelectedNode = currentNode;
+        }
+
+        private void UpateCategoryComboBox()
+        {
+            this.categoryComboBox.Items.Clear();
+            this.categoryComboBox.Items.AddRange(this.Settings.Categories.ToArray());
+            if (this.categoryComboBox.Items.Count > 0)
+                this.categoryComboBox.SelectedIndex = 0;
         }
 
         private void categoryComboBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -722,7 +732,7 @@ namespace OpenTheDoc
                 return;
             }
             
-            SelectTreeNodeByUrl(e.Url.ToString());
+            SelectTreeNode(e.Url.ToString());
         }
 
         private void WebBrowser_StatusTextChanged(object sender, EventArgs e)

@@ -335,15 +335,10 @@ namespace OpenTheDoc
 
         #region Core Methods
 
-        // Get books those have TOC, filter by category,
-        // including those have no categories if in !strict mode
-        // category==string.Empty means all categories
-        internal List<Book> GetBooks(string category, bool strict)
+        // Only need to update bookCache after changing settings
+        internal void UpdateBookCache()
         {
-            List<Book> books = new List<Book>();
-            if (this.bookCache == null)
-                this.bookCache = new Dictionary<string, Book>();
-            
+            Dictionary<string, Book> newBookCache = new Dictionary<string, Book>();
             foreach (string docPath in this.settingObject.DocPaths)
             {
                 if (!Directory.Exists(docPath) || docPath.ToLower().StartsWith("http"))
@@ -355,7 +350,7 @@ namespace OpenTheDoc
                     if (!File.Exists(tocPath)) continue;
 
                     Book book;
-                    if (this.bookCache.ContainsKey(tocPath))
+                    if (this.bookCache != null && this.bookCache.ContainsKey(tocPath))
                     {
                         book = this.bookCache[tocPath];
                         this.DebugPrint("Load from cache. tocPath: ", tocPath);
@@ -363,17 +358,31 @@ namespace OpenTheDoc
                     else
                     {
                         book = BookHelper.MakeBook(docPath, toc);
-                        this.bookCache.Add(tocPath, book);
-                        this.DebugPrint("Book made. tocPath: ", tocPath);
+                        this.DebugPrint("Load from disk. tocPath: ", tocPath);
                     }
+                    newBookCache.Add(tocPath, book);
+                }
+            }
+            this.bookCache = newBookCache;
+        }
 
-                    if (category == string.Empty || 
-                        book.Categories.Contains(category) || 
-                        (!strict && book.Categories.Count == 0))
-                    {
-                        books.Add(book);
-                        this.DebugPrint("Book added. tocPath: ", tocPath);
-                    }
+        // Get books from bookCache, filter by category,
+        // including those have no categories if in !strict mode
+        // and category==string.Empty means all categories
+        internal List<Book> GetBooks(string category, bool strict)
+        {
+            List<Book> books = new List<Book>();
+            if (this.bookCache == null) this.UpdateBookCache();
+
+            this.DebugPrint("GetBooks by category: ", category);
+            foreach (Book book in this.bookCache.Values)
+            {
+                if (category == string.Empty ||
+                    book.Categories.Contains(category) ||
+                    (!strict && book.Categories.Count == 0))
+                {
+                    books.Add(book);
+                    this.DebugPrint("Book added. Title: ", book.Title);
                 }
             }
             return books;
