@@ -77,7 +77,7 @@ namespace OpenTheDoc
         }
 
         [DisplayName("Categories")]
-        [Category("Documentation"), Description("Categorize docs by attribute \"categories\" of root node of TOC file. Title Search only search the selected category of books.")]
+        [Category("Documentation"), Description("Categorize docs by attribute \"categories\" of root node of TOC file. Title Search only searches the selected category of books.")]
         public List<Category> Categories
         {
             get { return categories ?? (categories = new List<Category>(CATEGORIES)); }

@@ -494,9 +494,17 @@ namespace OpenTheDoc
         // Initializes and restores
         private void Init()
         {
+            //this.UpateCategoryComboBox();
+            //RestoreState();
+            //this.UpdateContentTree();
+            this.Load += new EventHandler(PluginUI_Load);
+        }
+
+        private void PluginUI_Load(object sender, EventArgs e)
+        {
             this.UpateCategoryComboBox();
             RestoreState();
-            this.UpdateContentTree();
+            //this.UpdateContentTree();
         }
 
         #endregion
@@ -681,7 +689,7 @@ namespace OpenTheDoc
         {
             this.pluginMain.UpdateBookCache();
             this.UpateCategoryComboBox();
-            this.UpdateContentTree();
+            //this.UpdateContentTree();
         }
 
         private void settingStripButton_Click(object sender, EventArgs e)
@@ -706,7 +714,7 @@ namespace OpenTheDoc
             this.categoryComboBox.Items.Clear();
             this.categoryComboBox.Items.AddRange(this.Settings.Categories.ToArray());
             if (this.categoryComboBox.Items.Count > 0)
-                this.categoryComboBox.SelectedIndex = 0;
+                this.categoryComboBox.SelectedIndex = 0;    // Will send SelectedIndexChanged event
         }
 
         private void categoryComboBox_SelectedIndexChanged(object sender, EventArgs e)

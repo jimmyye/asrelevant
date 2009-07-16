@@ -265,7 +265,8 @@ namespace OpenTheDoc
         /// </summary>
         public void SaveSettings()
         {
-            this.pluginUI.SaveState();
+            if (this.pluginUI != null)
+                this.pluginUI.SaveState();
             ObjectSerializer.Serialize(this.settingFilename, this.settingObject);
         }
 
@@ -335,11 +336,66 @@ namespace OpenTheDoc
 
         #region Core Methods
 
-        // Only need to update bookCache after changing settings
+        // Inspired by eylon
+        private List<String> GetDocPaths() 
+        {
+            List<string> docPaths = new List<string>();
+            foreach (string docPath in settingObject.DocPaths)
+            {
+                if (docPath.ToLower().StartsWith("http:"))
+                    docPaths.Add(docPath);
+                // $(ProjectPath)\docs
+                else if (PluginBase.CurrentProject != null && docPath.StartsWith("$(ProjectPath)"))
+                {
+                    string path = PluginBase.CurrentProject.GetAbsolutePath(docPath.Replace("$(ProjectPath)\\", ""));
+                    if (Directory.Exists(path))
+                    {
+                        docPaths.Add(path);
+                        DebugPrint("Project docPath: ", path);
+                    }
+                }
+                // $(GlobalClasspaths)\..\docs
+                else if (ASCompletion.Context.ASContext.Context.Settings != null && docPath.StartsWith("$(GlobalClasspaths)"))
+                {
+                    string relativePath = docPath.Replace("$(GlobalClasspaths)\\", "");
+                    foreach (string globalClasspath in ASCompletion.Context.ASContext.Context.Settings.UserClasspath)
+                    {
+                        string path = Path.Combine(globalClasspath, relativePath);
+                        if (Directory.Exists(path))
+                        {
+                            docPaths.Add(path);
+                            DebugPrint("GlobalClass docPath: ", path);
+                        }
+                    }
+                }
+                // X:\path\to\alldocs\*
+                else if (docPath.EndsWith("*")) // All paths in basePath
+                {
+                    string basePath = docPath.Remove(docPath.Length - 1);
+                    if (Directory.Exists(basePath))
+                    {
+                        DebugPrint("Paths in " + basePath);
+                        foreach (string path in Directory.GetDirectories(basePath))
+                        {
+                            docPaths.Add(path);
+                            DebugPrint(path);
+                        }
+                    }
+                }
+                // Put this one in the end because "$(GlobalClasspaths)\..\docs" equals "docs"
+                // which will be took as relative path and it exists: FlashDevelop\docs
+                else if (Directory.Exists(docPath))
+                    docPaths.Add(docPath);
+                
+            }
+            return docPaths;
+        }
+
+        // Updates bookCache after changing settings
         internal void UpdateBookCache()
         {
             Dictionary<string, Book> newBookCache = new Dictionary<string, Book>();
-            foreach (string docPath in this.settingObject.DocPaths)
+            foreach (string docPath in GetDocPaths())
             {
                 if (!Directory.Exists(docPath) || docPath.ToLower().StartsWith("http"))
                     continue;
@@ -391,7 +447,7 @@ namespace OpenTheDoc
         internal List<string> GetBooksWithoutToc()
         {
             List<string> books = new List<string>();
-            foreach (string docPath in this.settingObject.DocPaths)
+            foreach (string docPath in GetDocPaths())
             {
                 if (docPath.ToLower().StartsWith("http"))
                 {
@@ -405,7 +461,11 @@ namespace OpenTheDoc
                 foreach (string toc in this.settingObject.TOC)
                 {
                     string tocPath = Path.Combine(docPath, toc);
-                    if (File.Exists(tocPath)) withoutToc = false;
+                    if (File.Exists(tocPath))
+                    {
+                        withoutToc = false;
+                        break;
+                    }
                 }
 
                 if (withoutToc)
@@ -610,6 +670,7 @@ namespace OpenTheDoc
                 xpath = String.Format(xpathStringFormat.ToString(), text.ToUpper());
             }
 
+            // Search
             foreach (Book book in this.GetBooks(category, true))
             {
                 XmlNodeList results = book.Toc.SelectNodes(xpath);
@@ -664,6 +725,12 @@ namespace OpenTheDoc
         internal void DebugPrint(string info, string str)
         {
             TraceManager.Add("\n" + info);
+            TraceManager.Add(str);
+        }
+
+        [Conditional("DEBUG")]
+        internal void DebugPrint(string str)
+        {
             TraceManager.Add(str);
         }
 
