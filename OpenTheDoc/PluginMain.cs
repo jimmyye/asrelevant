@@ -155,6 +155,13 @@ namespace OpenTheDoc
                     Keys key = (e as KeyEvent).Value;
                     if (key == this.settingObject.Shortcut || (this.settingObject.HandleF1 && key == Keys.F1))
                     {
+                        // To show tip, not to show documentation
+                        if (key == Keys.F1)
+                        {
+                            if (PluginCore.Controls.UITools.CallTip.CallTipActive || PluginCore.Controls.CompletionList.Active)
+                                break;
+                        }
+
                         this.OpenTheDoc();
                         if (this.settingObject.AlwaysOpenHelpPanel)
                             this.OpenHelpPanel();
