@@ -37,7 +37,8 @@ namespace OpenTheDoc
         const bool HANDLE_F1 = false;
         const bool SHOW_API_SEARCH_RESULT = false;
         const bool ALWAYS_OPEN_HELP_PANEL = false;
-        const Keys SHORTCUT = Keys.Control | Keys.F1;
+        const Keys SHORTCUT = Keys.F1;
+        const Keys SHORTCUT_NEW_TAB = Keys.Control | Keys.F1;
         const Keys SHORTCUT_HELP_PANEL = Keys.Shift | Keys.F1;
 
         private string[] docPaths = DOC_PATHS;
@@ -46,8 +47,8 @@ namespace OpenTheDoc
         private string homePage;
         private bool showAPISearchResult = SHOW_API_SEARCH_RESULT;
         private bool alwaysOpenHelpPanel = ALWAYS_OPEN_HELP_PANEL;
-        private bool handleF1 = HANDLE_F1;
-        private Keys shortcut = SHORTCUT;
+        private Keys shortcutCurrentTab = SHORTCUT;
+        private Keys shortcutNewTab = SHORTCUT_NEW_TAB;
         private Keys shortcutHelpPanel = SHORTCUT_HELP_PANEL;
 
         #region Documentation
@@ -108,24 +109,24 @@ namespace OpenTheDoc
 
         #region Shortcuts
 
-        [DisplayName("Shortcut")]
-        [Category("Shortcuts"), Description("API search: Resolve the element at cursor position and OpenTheDoc in HelpPanel. Hide HelpPanel if it's floating and already focused (F1 has the same function)."), DefaultValue(SHORTCUT)]
-        public Keys Shortcut
+        [DisplayName("API Search")]
+        [Category("Shortcuts"), Description("Resolve the element at cursor position and OpenTheDoc in HelpPanel. Hide HelpPanel if it's floating and already focused."), DefaultValue(SHORTCUT)]
+        public Keys ShortcutCurrentTab
         {
-            get { return shortcut == Keys.None ? SHORTCUT : shortcut; }
-            set { shortcut = value; }
+            get { return shortcutCurrentTab == Keys.None ? SHORTCUT : shortcutCurrentTab; }
+            set { shortcutCurrentTab = value; }
         }
 
-        [DisplayName("Handle F1")]
-        [Category("Shortcuts"), Description("If true, uses F1 for API search and the default handler of FD will be suppressed."), DefaultValue(HANDLE_F1)]
-        public Boolean HandleF1
+        [DisplayName("APISearchNewTab")]
+        [Category("Shortcuts"), Description("API search and OpenTheDoc in a new tab. Hide HelpPanel if it's floating and already focused."), DefaultValue(SHORTCUT_NEW_TAB)]
+        public Keys ShortcutNewTab
         {
-            get { return handleF1; }
-            set { handleF1 = value; }
+            get { return shortcutNewTab == Keys.None ? SHORTCUT_NEW_TAB : shortcutNewTab; }
+            set { shortcutNewTab = value; }
         }
 
-        [DisplayName("Shortcut for HelpPanel")]
-        [Category("Shortcuts"), Description("Open HelpPanel with HomePage if closed, toggle visibility if it's floating, simply show if it's docking."), DefaultValue(SHORTCUT_HELP_PANEL)]
+        [DisplayName("HelpPanel")]
+        [Category("Shortcuts"), Description("Open HelpPanel with HomePage if closed, or toggle visibility if it's floating, or simply show if it's docking."), DefaultValue(SHORTCUT_HELP_PANEL)]
         public Keys ShortcutHelpPanel
         {
             get { return shortcutHelpPanel == Keys.None ? SHORTCUT_HELP_PANEL : shortcutHelpPanel; }

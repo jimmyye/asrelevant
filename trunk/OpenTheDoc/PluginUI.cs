@@ -10,6 +10,7 @@ using System.IO;
 using System.Collections.Generic;
 using OpenTheDoc.Resources;
 using System.Drawing;
+using WeifenLuo.WinFormsUI.Docking;
 
 namespace OpenTheDoc
 {
@@ -21,7 +22,7 @@ namespace OpenTheDoc
 
         private ImageList imageList;
         private PluginMain pluginMain;
-        private Browser browser;          // html document browser
+        private DockPanel dockPanel;
 
         private CheckBox matchCaseCheckBox;
         private RadioButton containsRadioButton;
@@ -65,9 +66,6 @@ namespace OpenTheDoc
             this.InitializeComponent();
             this.InitComponent();
             this.InitializeGraphics();
-
-            this.Init();
-            
         }
 
         #region Properties
@@ -412,7 +410,7 @@ namespace OpenTheDoc
             this.searchToolStrip.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
-
+            this.Load += new EventHandler(PluginUI_Load);
         }
 
         #endregion
@@ -421,16 +419,15 @@ namespace OpenTheDoc
 
         private void InitComponent()
         {
-            // 
-            // browser
-            // 
-            this.browser = new Browser();
-            this.browser.Dock = DockStyle.Fill;
-            this.browser.WebBrowser.WebBrowserShortcutsEnabled = true;
-            this.browser.WebBrowser.PreviewKeyDown += new PreviewKeyDownEventHandler(WebBrowser_PreviewKeyDown);
-            this.browser.WebBrowser.ScriptErrorsSuppressed = true;
-            this.browser.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
-            this.browser.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
+            //
+            // dockPanel
+            //
+            this.dockPanel = new DockPanel();
+            //this.dockPanel.TabIndex = 2;
+            this.dockPanel.DocumentStyle = DocumentStyle.DockingWindow;
+            this.dockPanel.Dock = DockStyle.Fill;
+            this.dockPanel.Name = "dockPanel";
+            this.dockPanel.ActiveDocumentChanged += new EventHandler(dockPanel_ActiveDocumentChanged);
             // 
             // matchCaseCheckBox
             // 
@@ -456,7 +453,7 @@ namespace OpenTheDoc
             this.startsWithHost = new ToolStripControlHost(this.startsWithRadioButton);
             this.startsWithHost.Alignment = ToolStripItemAlignment.Right;
 
-            this.viewSplitContainer.Panel2.Controls.Add(this.browser);
+            this.viewSplitContainer.Panel2.Controls.Add(this.dockPanel);
             this.viewSplitContainer.Panel1Collapsed = true;
 
             this.searchToolStrip.Items.Add(this.startsWithHost);
@@ -491,15 +488,6 @@ namespace OpenTheDoc
             this.homePageToolStripButton.Image = this.imageList.Images[8];
         }
 
-        // Initializes and restores
-        private void Init()
-        {
-            //this.UpateCategoryComboBox();
-            //RestoreState();
-            //this.UpdateContentTree();
-            this.Load += new EventHandler(PluginUI_Load);
-        }
-
         private void PluginUI_Load(object sender, EventArgs e)
         {
             this.UpateCategoryComboBox();
@@ -509,7 +497,7 @@ namespace OpenTheDoc
 
         #endregion
 
-        #region Contents
+        #region Content Tree
 
         private void UpdateContentTree()
         {
@@ -568,7 +556,7 @@ namespace OpenTheDoc
             if (xmlnode == null) return;
             if (xmlnode.GetAttribute("label") == string.Empty) return;
 
-            TreeNode root = this.getRoot(node);
+            TreeNode root = getRoot(node);
             if (root == node || root == null) return;
 
             string href = xmlnode.GetAttribute("href");
@@ -578,8 +566,8 @@ namespace OpenTheDoc
             string url = Path.Combine(docPath, href);
 
             isNodeClicked = true;
-            this.OpenUrl(url);
-            this.pluginMain.DebugPrint("Doc Url:", url);
+            OpenUrl(url);
+            pluginMain.DebugPrint("Doc Url:", url);
         }
 
         // Select a tree node according to the url
@@ -622,7 +610,7 @@ namespace OpenTheDoc
                         this.pluginMain.DebugPrint("fullPaths: ", string.Join("\\", fullPath.ToArray()));
                     }
 
-                    // Find the nearest one to the selectedNode
+                    // Find the nearest node to the selectedNode
                     int index = 0;
                     if (contentTree.SelectedNode != null)
                     {
@@ -725,35 +713,162 @@ namespace OpenTheDoc
 
         #endregion
 
+        #region Content Tree State
+
+        Dictionary<DockContent, TreeState> treeStates = new Dictionary<DockContent, TreeState>();
+        private void SaveContentTreeState(DockContent dc)
+        {
+            if (dc == null) return;
+
+            this.contentTree.SaveExpandedState();
+            this.contentTree.SaveScrollState();
+            TreeState state = this.contentTree.State;
+
+            TreeState stateClone = new TreeState
+            {
+                highlight = this.contentTree.SelectedNode.FullPath,
+                TopPath = state.TopPath,
+                BottomPath = state.BottomPath,
+                ExpandedPaths = new ArrayList(state.ExpandedPaths)
+            };
+
+            PluginMain.DebugPrint("Save: " + stateClone.highlight);
+            if (treeStates.ContainsKey(dc))
+                treeStates[dc] = stateClone;
+            else
+                treeStates.Add(dc, stateClone);
+        }
+
+        private void RestoreContentTreeState(DockContent dc)
+        {
+            TreeState state = treeStates[dc];
+            this.contentTree.BeginStatefulUpdate();
+            this.contentTree.CollapseAll();
+            this.contentTree.EndStatefulUpdate(state);
+
+            if (state.highlight != null)
+            {
+                TreeNode toHighligh = this.contentTree.FindClosestPath(state.highlight);
+                if (toHighligh != null) this.contentTree.SelectedNode = toHighligh;
+            }
+            // Have to RestoreScrollState again after set SelectNode
+            this.contentTree.RestoreScrollState();
+        }
+
+        #endregion
+
+        #region Tabs
+
+        private DockContent CreateDockContent(string url)
+        {
+            DockContent dc = new DockContent();
+            dc.DockAreas = DockAreas.Document;
+            dc.Text = "New Tab";
+            dc.Controls.Add(CreateBrowser(url));
+            dc.Show(this.dockPanel);
+            
+            return dc;
+        }
+
+        private DockContent previousActiveDockContent = null;
+        private DockContent CurrentActiveDockContent
+        {
+            get
+            {
+                return this.dockPanel.ActiveDocument as DockContent;
+            }
+        }
+
+        private void dockPanel_ActiveDocumentChanged(object sender, EventArgs e)
+        {
+            PluginMain.DebugPrint("ActiveDocumentChanged");
+            if (this.CurrentActiveDockContent == null) return;
+            
+            if (treeStates.ContainsKey(this.CurrentActiveDockContent))
+            {
+                // Save state
+                if (this.previousActiveDockContent != null)
+                {
+                    PluginMain.DebugPrint("save prev");
+                    SaveContentTreeState(this.previousActiveDockContent);
+                }
+                // Restore state
+                RestoreContentTreeState(this.CurrentActiveDockContent);
+            }
+            else
+                SaveContentTreeState(this.CurrentActiveDockContent);
+
+            this.previousActiveDockContent = this.CurrentActiveDockContent;
+            this.CurrentActiveDockContent.Activate();
+        }
+
+        #endregion
+
         #region Browser
 
-        internal void OpenUrl(string url)
+        private Browser CreateBrowser(string url)
         {
-            this.browser.WebBrowser.Navigate(url);
+            Browser b = new Browser();
+            b.Dock = DockStyle.Fill;
+            b.WebBrowser.PreviewKeyDown += new PreviewKeyDownEventHandler(WebBrowser_PreviewKeyDown);
+            b.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
+            b.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
+            b.WebBrowser.Navigate(url);
+
+            return b;
+        }
+
+        private Browser CurrentActiveBrowser
+        {
+            get
+            {
+                try
+                {
+                    Browser b = this.CurrentActiveDockContent.Controls[0] as Browser;
+                    return b;
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
+        public void OpenUrl(string url)
+        {
+            OpenUrl(url, false);
+        }
+
+        public void OpenUrl(string url, bool newTab)
+        {
+            if (newTab || CurrentActiveBrowser == null)
+            {
+                SaveContentTreeState(this.previousActiveDockContent);
+                CreateDockContent(url);
+            }
+            else
+                CurrentActiveBrowser.WebBrowser.Navigate(url);
         }
 
         private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
         {
             if (isNodeClicked)
-            {
                 isNodeClicked = false;
-                return;
-            }
-            
-            SelectTreeNode(e.Url.ToString());
+            else
+                SelectTreeNode(e.Url.ToString());
         }
 
         private void WebBrowser_StatusTextChanged(object sender, EventArgs e)
         {
-            this.statusLabel.Text = this.browser.WebBrowser.StatusText;
+            this.statusLabel.Text = (sender as WebBrowser).StatusText;
         }
 
         // Hide HelpPanel when one of the shortcuts is pressed when WebBrowser is focused
         private void WebBrowser_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             if (e.KeyData == this.Settings.ShortcutHelpPanel ||
-                e.KeyData == this.Settings.Shortcut ||
-                e.KeyData == Keys.F1)
+                e.KeyData == this.Settings.ShortcutCurrentTab ||
+                e.KeyData == this.Settings.ShortcutNewTab)
                 this.pluginMain.WindowVisible = false;
         }
 

@@ -121,7 +121,8 @@ namespace OpenTheDoc
             // webBrowser
             //
             this.webBrowser.AllowWebBrowserDrop = true;
-            this.webBrowser.WebBrowserShortcutsEnabled = false;
+            this.webBrowser.WebBrowserShortcutsEnabled = true;
+            this.webBrowser.ScriptErrorsSuppressed = true;
             this.webBrowser.Dock = System.Windows.Forms.DockStyle.Fill;
             this.webBrowser.Location = new System.Drawing.Point(0, 25);
             this.webBrowser.Name = "webBrowser";
@@ -204,7 +205,9 @@ namespace OpenTheDoc
         /// </summary>
         private void WebBrowserNewWindow(Object sender, CancelEventArgs e)
         {
+            // TODO: Open in a new tab
             this.webBrowser.Navigate(this.webBrowser.StatusText);
+            e.Cancel = true;
         }
 
         /// <summary>
@@ -233,7 +236,7 @@ namespace OpenTheDoc
             if (this.webBrowser.DocumentTitle.Trim() == "")
                 this.Parent.Text = this.webBrowser.Document.Domain;
             else
-                this.Parent.Text = this.webBrowser.DocumentTitle;
+                this.Parent.Text = this.webBrowser.DocumentTitle.Split(new string[]{" - "}, StringSplitOptions.RemoveEmptyEntries)[0];
         }
 
         /// <summary>
