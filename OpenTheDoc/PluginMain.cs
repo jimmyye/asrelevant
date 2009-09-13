@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -33,6 +32,7 @@ namespace OpenTheDoc
         private Image pluginImage;
 
         private const string OPEN_THE_DOC = "OpenTheDoc";
+        private const string OPEN_THE_DOC_NEW_TAB = "OpenTheDocNewTab";
 
         private Dictionary<string, Book> bookCache;             // <tocPath, book>
 
@@ -126,7 +126,7 @@ namespace OpenTheDoc
                 // Handle custom command "OpenTheDoc", API Search
                 case EventType.Command:
                     string command = (e as DataEvent).Action;
-                    if (command == "OpenTheDoc")
+                    if (command == OPEN_THE_DOC || command == OPEN_THE_DOC_NEW_TAB)
                     {
                         // Copy Hashtable to Dictionary<string,string> to avoid casting
                         Hashtable itemDetailsHashtable = (e as DataEvent).Data as Hashtable;
@@ -134,17 +134,17 @@ namespace OpenTheDoc
 
                         foreach (DictionaryEntry item in itemDetailsHashtable)
                             itemDetails.Add(item.Key as string, item.Value as string);
-                        this.DebugPrint("Item Details:", itemDetails);
+                        DebugPrint("Item Details:", itemDetails);
 
                         string lang = PluginBase.CurrentProject.Language;
-                        this.DebugPrint("Project Language:", lang);
+                        DebugPrint("Project Language:", lang);
 
                         // API Search
-                        List<SearchResult> resultList = this.APISearch(itemDetails, lang);
+                        List<SearchResult> resultList = APISearch(itemDetails, lang);
                         this.pluginUI.UpdateSearchResultList(resultList, this.settingObject.ShowAPISearchResult);
 
                         if (resultList.Count > 0)
-                            this.OpenHelpPanel(resultList[0].filePath);
+                            OpenHelpPanel(resultList[0].filePath, command == OPEN_THE_DOC_NEW_TAB);
                         
                         e.Handled = true;
                     }
@@ -153,7 +153,7 @@ namespace OpenTheDoc
                 // When HandleF1, the default handler of FD will be suppressed
                 case EventType.Keys:
                     Keys key = (e as KeyEvent).Value;
-                    if (key == this.settingObject.Shortcut || (this.settingObject.HandleF1 && key == Keys.F1))
+                    if (key == this.settingObject.ShortcutCurrentTab || key == this.settingObject.ShortcutNewTab)
                     {
                         // To show tip, not to show documentation
                         if (key == Keys.F1)
@@ -162,9 +162,16 @@ namespace OpenTheDoc
                                 break;
                         }
 
-                        this.OpenTheDoc();
+                        //if (!FlashDevelop.MainForm.IsFirst)
+                        //{
+                        //    SingleInstanceApp.NotifyExistingInstance(new string[] { "11", "22", "33" });
+                        //    e.Handled = true;
+                        //    break;
+                        //}
+                        
+                        OpenTheDoc(key == this.settingObject.ShortcutCurrentTab ? OPEN_THE_DOC : OPEN_THE_DOC_NEW_TAB);
                         if (this.settingObject.AlwaysOpenHelpPanel)
-                            this.OpenHelpPanel();
+                            OpenHelpPanel();
 
                         e.Handled = true;
                     }
@@ -194,7 +201,8 @@ namespace OpenTheDoc
         public void AddEventHandlers()
         {
             EventManager.AddEventHandler(this, EventType.Command | EventType.Keys, HandlingPriority.High);
-            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.Shortcut);
+            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.ShortcutCurrentTab);
+            PluginBase.MainForm.IgnoredKeys.Add(this.settingObject.ShortcutNewTab);
         }
 
         /// <summary>
@@ -242,14 +250,25 @@ namespace OpenTheDoc
             
             this.pluginPanel.KeyPreview = true;
             this.pluginPanel.KeyDown += new KeyEventHandler(pluginPanel_KeyDown);
+
+            //if (FlashDevelop.MainForm.IsFirst)
+            //{
+            //    SingleInstanceApp.Message += delegate(Object sender, Object message)
+            //    {
+            //        //DebugPrint((message as String[]).ToString());
+            //        this.OpenHelpPanel();
+            //    };
+
+            //    SingleInstanceApp.Initialize();
+            //}
         }
 
         // Hide HelpPanel when one of the shortcuts is pressed
         private void pluginPanel_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyData == this.settingObject.ShortcutHelpPanel ||
-                e.KeyData == this.settingObject.Shortcut ||
-                e.KeyData == Keys.F1)
+                e.KeyData == this.settingObject.ShortcutCurrentTab ||
+                e.KeyData == this.settingObject.ShortcutNewTab)
                 this.WindowVisible = false;
         }
 
@@ -285,7 +304,7 @@ namespace OpenTheDoc
             if (this.pluginPanel.IsHidden)
             {
                 this.pluginUI.Reset();
-                this.OpenHelpPanel(this.settingObject.HomePage);
+                this.OpenHelpPanel(this.settingObject.HomePage, false);
             }
             else
             {
@@ -296,10 +315,10 @@ namespace OpenTheDoc
             }
         }
 
-        private void OpenHelpPanel(string url)
+        private void OpenHelpPanel(string url, bool newTab)
         {
             this.OpenHelpPanel();
-            this.pluginUI.OpenUrl(url);
+            this.pluginUI.OpenUrl(url, newTab);
         }
 
         private void OpenHelpPanel()
@@ -308,10 +327,11 @@ namespace OpenTheDoc
 
             this.pluginPanel.Show();
             this.pluginPanel.BringToFront();
+            this.pluginPanel.Focus();
         }
 
-        // Resolve current element and call command "OpenTheDoc"
-        private void OpenTheDoc()
+        // Resolve current element and call command "OpenTheDoc" or "OpenTheDocNewTab"
+        private void OpenTheDoc(string command)
         {
             ITabbedDocument doc = PluginBase.MainForm.CurrentDocument;
             // editor ready?
@@ -319,7 +339,7 @@ namespace OpenTheDoc
 
             ScintillaNet.ScintillaControl sci = doc.IsEditable ? doc.SciControl : null;
             if (sci != null)
-                ASCompletion.Completion.ASComplete.ResolveElement(sci, OPEN_THE_DOC);
+                ASCompletion.Completion.ASComplete.ResolveElement(sci, command);
         }
 
         // Visibility of the window that holds HelpPanel
@@ -736,7 +756,7 @@ namespace OpenTheDoc
         }
 
         [Conditional("DEBUG")]
-        internal void DebugPrint(string str)
+        static public void DebugPrint(string str)
         {
             TraceManager.Add(str);
         }
