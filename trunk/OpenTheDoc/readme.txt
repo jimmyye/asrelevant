@@ -1,36 +1,58 @@
 OpenTheDoc: Open ASDocs for FlashDevelop 3
 
-0. Update from 2.0
-First backup your DocPaths and delete the setting file in Data/OpenTheDoc.
-If you installed FD in normal mode (not standalone), the file may locate in:
-In xp: C:\Documents and Settings\<user>\Local Settings\Application Data\FlashDevelop\Data\OpenTheDoc
-And may be different in other systems.
+Installation
+* Main Menu - Tools - Application Files - Copy OpenTheDoc.dll to the Plugins folder
 
-1. Installation
-Main Menu - Tools - Application Files - Copy OpenTheDoc.dll to the Plugins folder
-If you have an older version, first backup your DocPaths and delete the setting file in Data/OpenTheDoc.
+API Search
+* F1 to search when cursor on a word and OpenTheDoc in HelpPenal.
+* Ctrl+F1 to search and open in new tab in HelpPenal.
 
-2. Related Topics
-Put your cursor on a word and press Ctrl+F1 to search.
-Click an item to Open the topic in browser.
-You can choose a DocViewer in settings, such as Help Contents.
+Help Penal
+* Supports ASDocs with TOC(Table Of Contents) file.
+* Title search.
+* Shift+F1 to show, F1, Ctrl+F1, Shift+F1 to hide.
+* Tabs
+* SingleInstanceMode: Only one HelpPanel for multiple FlashDevelop instances
 
-3. Help Contents
-Supports ASDocs with TOC(Table Of Contents) file.
-Title search.
-
-4. Documentations
-- Unorganized documentations with TOC, e.g. AS2 reference in Flash IDE.
-- Well-organized documentations without TOC. You can use TocGen to generate TOCs from standard ASDocs.
-- Well-organized documentations with TOC, you can find and download them in http://livedocs.adobe.com.
+Documentations
+* Unorganized documentations with TOC, e.g. AS2 reference in Flash IDE.
+* Well-organized documentations without TOC. You can use TocGen to generate TOCs from standard ASDocs.
+* Well-organized documentations with TOC, you can find and download them in http://livedocs.adobe.com.
+* Documentation categories. Categorize by attribute "categories" of the root node of TOC file
+* 4 kinds of DocPath:
+  X:\path\to\alldocs\as3\
+  X:\path\to\alldocs\*, means all folders in alldocs
+  $(ProjectPath)\docs
+  $(GlobalClasspaths)\..\docs
 
 Some ASDocs release with Flash IDE, Flex Builder.
 Flex3 reference in Flex Builder 3: 
 Find doc.zip and extract it to SomeFolder\doc\, put toc.xml and tocAPI.xml to the same folder.
 toc.xml is for Flex Help, and tocAPI.xml is for Language Reference.
 
+Download
+http://code.google.com/p/asrelevant/downloads/list
 
-Changelog: 
+Source (svn)
+http://asrelevant.googlecode.com/svn/trunk/OpenTheDoc
+
+Changes: 
+
+2.2.0  2009-09-19
+* Enable WebBrowser shortcuts (Ctrl+C, Ctrl+F, etc.)
+* Language detecting. You have to add attribute "categories" to the root node of TOC file, with value: as2, as3, etc.
+* HelpPanel = HelpContents + OpenTheDocPanel, like other FD panels
+* Save and restore states, size...
+* Documentation categories. Categorize by attribute "categories" of the root node of TOC file
+* Press Refresh button to update Contents
+* 3 more kinds of DocPath:
+  X:\path\to\alldocs\*, means all folders in alldocs
+  $(ProjectPath)\docs
+  $(GlobalClasspaths)\..\docs
+* Tabs
+* SingleInstanceMode: Only one HelpPanel for multiple FlashDevelop instances
+* New search option: "Equals"
+* Others refer to Settings
 
 2.1.0  2009-04-11
 - Title Search
