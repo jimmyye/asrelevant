@@ -135,6 +135,29 @@ namespace OpenTheDoc
 
         #endregion
 
+        #region SingleInstance
+
+        private bool singleInstance;
+        //private bool oneTabPerFDInstance;
+
+        [DisplayName("SingleInstanceMode")]
+        [Category("SingleInstance"), Description("Only one HelpPanel for multiple FlashDevelop instances."), DefaultValue(false)]
+        public bool SingleInstanceMode
+        {
+            get { return singleInstance; }
+            set { singleInstance = value; }
+        }
+
+        //[DisplayName("OneTabPerFDInstance")]
+        //[Category("SingleInstance"), Description("One tab for one FlashDevelop instance."), DefaultValue(false)]
+        //public bool OneTabPerFDInstance
+        //{
+        //    get { return oneTabPerFDInstance; }
+        //    set { oneTabPerFDInstance = value; }
+        //}
+
+        #endregion
+
         #region State Saving
 
         private int mainSplitContainerSplitterDistance;

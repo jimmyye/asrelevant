@@ -27,10 +27,12 @@ namespace OpenTheDoc
         private CheckBox matchCaseCheckBox;
         private RadioButton containsRadioButton;
         private RadioButton startsWithRadioButton;
+        private RadioButton equalsRadioButton;
 
         private ToolStripControlHost matchCaseHost;
         private ToolStripControlHost containsHost;
         private ToolStripControlHost startsWithHost;
+        private ToolStripControlHost equalsHost;
 
         private bool isNodeClicked = false;
 
@@ -69,18 +71,6 @@ namespace OpenTheDoc
         }
 
         #region Properties
-
-        private bool IsMatchCase
-        {
-            get { return this.matchCaseCheckBox.Checked; }
-            set { this.matchCaseCheckBox.Checked = value; }
-        }
-
-        private bool IsContains
-        {
-            get { return this.containsRadioButton.Checked; }
-            set { this.containsRadioButton.Checked = value; }
-        }
 
         private Settings Settings
         {
@@ -441,6 +431,7 @@ namespace OpenTheDoc
             // 
             this.containsRadioButton = new RadioButton();
             this.containsRadioButton.Text = "Contains";
+            this.containsRadioButton.Checked = true;
             this.containsRadioButton.BackColor = Color.Transparent;
             this.containsHost = new ToolStripControlHost(this.containsRadioButton);
             this.containsHost.Alignment = ToolStripItemAlignment.Right;
@@ -452,14 +443,22 @@ namespace OpenTheDoc
             this.startsWithRadioButton.BackColor = Color.Transparent;
             this.startsWithHost = new ToolStripControlHost(this.startsWithRadioButton);
             this.startsWithHost.Alignment = ToolStripItemAlignment.Right;
+            // 
+            // equalsRadioButton
+            // 
+            this.equalsRadioButton = new RadioButton();
+            this.equalsRadioButton.Text = "Equals";
+            this.equalsRadioButton.BackColor = Color.Transparent;
+            this.equalsHost = new ToolStripControlHost(this.equalsRadioButton);
+            this.equalsHost.Alignment = ToolStripItemAlignment.Right;
 
             this.viewSplitContainer.Panel2.Controls.Add(this.dockPanel);
             this.viewSplitContainer.Panel1Collapsed = true;
 
+            this.searchToolStrip.Items.Add(this.equalsHost);
             this.searchToolStrip.Items.Add(this.startsWithHost);
             this.searchToolStrip.Items.Add(this.containsHost);
             this.searchToolStrip.Items.Add(this.matchCaseHost);
-            this.IsContains = true;
         }
 
         /// <summary>
@@ -766,7 +765,7 @@ namespace OpenTheDoc
             dc.Text = "New Tab";
             dc.Controls.Add(CreateBrowser(url));
             dc.Show(this.dockPanel);
-            
+
             return dc;
         }
 
@@ -822,15 +821,20 @@ namespace OpenTheDoc
         {
             get
             {
-                try
-                {
-                    Browser b = this.CurrentActiveDockContent.Controls[0] as Browser;
-                    return b;
-                }
-                catch
-                {
-                    return null;
-                }
+                return GetBrowser(this.CurrentActiveDockContent);
+            }
+        }
+
+        private Browser GetBrowser(DockContent dc)
+        {
+            try
+            {
+                Browser b = dc.Controls[0] as Browser;
+                return b;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -849,6 +853,28 @@ namespace OpenTheDoc
             else
                 CurrentActiveBrowser.WebBrowser.Navigate(url);
         }
+
+        //public void OpenUrl(string url, string tabID)
+        //{
+        //    DockContent tab = null;
+        //    foreach (DockContent dc in this.dockPanel.Contents)
+        //    {
+        //        if (dc.Name == tabID)
+        //        {
+        //            tab = dc;
+        //            break;
+        //        }
+        //    }
+
+        //    if (tab != null)
+        //    {
+        //        Browser b = GetBrowser(tab);
+        //        if (b != null)
+        //            b.WebBrowser.Navigate(url);
+        //    }
+        //    else
+        //        CreateDockContent(url, tabID);
+        //}
 
         private void WebBrowser_Navigating(object sender, WebBrowserNavigatingEventArgs e)
         {
@@ -890,6 +916,25 @@ namespace OpenTheDoc
             this.viewSplitContainer.Panel1Collapsed = !this.viewSplitContainer.Panel1Collapsed;
         }
 
+
+        private bool IsMatchCase
+        {
+            get { return this.matchCaseCheckBox.Checked; }
+            set { this.matchCaseCheckBox.Checked = value; }
+        }
+
+        private PluginMain.SearchOption SearchOption
+        {
+            get
+            {
+                if (this.containsRadioButton.Checked)
+                    return PluginMain.SearchOption.Contains;
+                else if (this.startsWithRadioButton.Checked)
+                    return PluginMain.SearchOption.StartsWith;
+                else
+                    return PluginMain.SearchOption.Equals;
+            }
+        }
         // Begins title search when "Enter" is pressed
         private void searchFieldComboBox_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -902,7 +947,7 @@ namespace OpenTheDoc
             if (this.searchFieldComboBox.Items.Count > 5)
                 this.searchFieldComboBox.Items.RemoveAt(5);
 
-            List<SearchResult> resultList = this.pluginMain.TitleSearch(sText, this.IsContains, this.IsMatchCase, this.SelectedCategory.Keyword);
+            List<SearchResult> resultList = this.pluginMain.TitleSearch(sText, this.SearchOption, this.IsMatchCase, this.SelectedCategory.Keyword);
             this.UpdateSearchResultList(resultList, true);
             this.searchResultListView.Focus();
             e.Handled = true;
