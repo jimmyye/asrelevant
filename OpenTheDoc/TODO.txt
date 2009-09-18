@@ -1,1 +1,2 @@
 - Bookmark and history
+- Documentation Manager
