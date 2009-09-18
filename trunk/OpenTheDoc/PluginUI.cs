@@ -813,7 +813,7 @@ namespace OpenTheDoc
             b.WebBrowser.StatusTextChanged += new EventHandler(WebBrowser_StatusTextChanged);
             b.WebBrowser.Navigating += new WebBrowserNavigatingEventHandler(WebBrowser_Navigating);
             b.WebBrowser.Navigate(url);
-
+            
             return b;
         }
 
@@ -882,6 +882,9 @@ namespace OpenTheDoc
                 isNodeClicked = false;
             else
                 SelectTreeNode(e.Url.ToString());
+
+            // To activate the tab
+            (sender as WebBrowser).Focus();
         }
 
         private void WebBrowser_StatusTextChanged(object sender, EventArgs e)
@@ -975,6 +978,13 @@ namespace OpenTheDoc
         {
             this.UpdateContentTree();
             this.UpdateSearchResultList(new List<SearchResult>(), false);
+
+            // Close all tabs
+            while (this.dockPanel.Contents.Count > 0)
+            {
+                var dc = this.dockPanel.Contents[0] as DockContent;
+                dc.Close();
+            }
         }
 
         // Call by PluginMain.SaveSettings()
