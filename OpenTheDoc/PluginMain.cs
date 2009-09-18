@@ -31,10 +31,19 @@ namespace OpenTheDoc
         private PluginUI pluginUI;
         private Image pluginImage;
 
+        //private string tabID;   // For SingleInstanceMode
+
+        // commands
         private const string OPEN_THE_DOC = "OpenTheDoc";
         private const string OPEN_THE_DOC_NEW_TAB = "OpenTheDocNewTab";
+        private const string OPEN_HELP_PANEL = "OpenHelpPanel";
 
         private Dictionary<string, Book> bookCache;             // <tocPath, book>
+
+        private bool IsNotFirst
+        {
+            get { return this.settingObject.SingleInstanceMode && !FlashDevelop.MainForm.IsFirst; }
+        }
 
         #region Required Properties
 
@@ -123,7 +132,7 @@ namespace OpenTheDoc
         {
             switch (e.Type)
             {
-                // Handle custom command "OpenTheDoc", API Search
+                // Handle custom command OPEN_THE_DOC and OPEN_THE_DOC_NEW_TAB, API Search
                 case EventType.Command:
                     string command = (e as DataEvent).Action;
                     if (command == OPEN_THE_DOC || command == OPEN_THE_DOC_NEW_TAB)
@@ -144,13 +153,28 @@ namespace OpenTheDoc
                         this.pluginUI.UpdateSearchResultList(resultList, this.settingObject.ShowAPISearchResult);
 
                         if (resultList.Count > 0)
-                            OpenHelpPanel(resultList[0].filePath, command == OPEN_THE_DOC_NEW_TAB);
+                        {
+                            // SingleInstanceMode
+                            if (this.IsNotFirst)
+                            {
+                                DebugPrint("SingleInstanceMode");
+                                //if (this.settingObject.OneTabPerFDInstance)
+                                //{
+                                //    if (string.IsNullOrEmpty(this.tabID))
+                                //        this.tabID = DateTime.Now.Ticks.ToString();
+                                //    command = this.tabID;
+                                //}
+                                // Let the first instance open the doc
+                                SingleInstanceApp.NotifyExistingInstance(new string[] { resultList[0].filePath, command });
+                            }
+                            else
+                                OpenHelpPanel(resultList[0].filePath, command == OPEN_THE_DOC_NEW_TAB);
+                        }
                         
                         e.Handled = true;
                     }
                     break;
 
-                // When HandleF1, the default handler of FD will be suppressed
                 case EventType.Keys:
                     Keys key = (e as KeyEvent).Value;
                     if (key == this.settingObject.ShortcutCurrentTab || key == this.settingObject.ShortcutNewTab)
@@ -161,17 +185,16 @@ namespace OpenTheDoc
                             if (PluginCore.Controls.UITools.CallTip.CallTipActive || PluginCore.Controls.CompletionList.Active)
                                 break;
                         }
-
-                        //if (!FlashDevelop.MainForm.IsFirst)
-                        //{
-                        //    SingleInstanceApp.NotifyExistingInstance(new string[] { "11", "22", "33" });
-                        //    e.Handled = true;
-                        //    break;
-                        //}
-                        
                         OpenTheDoc(key == this.settingObject.ShortcutCurrentTab ? OPEN_THE_DOC : OPEN_THE_DOC_NEW_TAB);
-                        if (this.settingObject.AlwaysOpenHelpPanel)
-                            OpenHelpPanel();
+
+                        // SingleInstanceMode
+                        if (this.IsNotFirst)
+                            ;
+                        else
+                        {
+                            if (this.settingObject.AlwaysOpenHelpPanel)
+                                OpenHelpPanel();
+                        }
 
                         e.Handled = true;
                     }
@@ -246,21 +269,37 @@ namespace OpenTheDoc
         {
             this.pluginUI = new PluginUI(this);
             this.pluginUI.Text = LocaleHelper.GetString("Title.PluginPanel");
+
             this.pluginPanel = PluginBase.MainForm.CreateDockablePanel(this.pluginUI, this.pluginGuid, this.pluginImage, DockState.DockRight);
-            
             this.pluginPanel.KeyPreview = true;
             this.pluginPanel.KeyDown += new KeyEventHandler(pluginPanel_KeyDown);
 
-            //if (FlashDevelop.MainForm.IsFirst)
-            //{
-            //    SingleInstanceApp.Message += delegate(Object sender, Object message)
-            //    {
-            //        //DebugPrint((message as String[]).ToString());
-            //        this.OpenHelpPanel();
-            //    };
+            // TODO: better solution
+            // prevent HelpPanel open when run FD
+            if (this.IsNotFirst)
+                this.pluginPanel.Layout += new LayoutEventHandler(pluginPanel_Layout);
 
-            //    SingleInstanceApp.Initialize();
-            //}
+            // SingleInstanceMode, the fisrt instance
+            if (FlashDevelop.MainForm.IsFirst)
+            {
+                DebugPrint("IsFirst");
+                SingleInstanceApp.Message += delegate(Object sender, Object message)
+                {
+                    string[] args = message as string[];
+                    if (args[1] == OPEN_HELP_PANEL)
+                        OpenHelpPanel();
+                    else
+                        OpenHelpPanel(args[0], args[1] == OPEN_THE_DOC_NEW_TAB);
+                };
+                SingleInstanceApp.Initialize();
+            }
+        }
+
+        // prevent HelpPanel open when run FD
+        private void pluginPanel_Layout(object sender, LayoutEventArgs e)
+        {
+            if (this.IsNotFirst)
+                this.WindowVisible = false;
         }
 
         // Hide HelpPanel when one of the shortcuts is pressed
@@ -301,25 +340,45 @@ namespace OpenTheDoc
         /// </summary>
         public void OpenHelpPanel(Object sender, System.EventArgs e)
         {
+            // SingleInstanceMode
+            if (this.IsNotFirst)
+            {
+                // Let the first instance open the panel
+                SingleInstanceApp.NotifyExistingInstance(new string[] { "", OPEN_HELP_PANEL });
+                return;
+            }
+
             if (this.pluginPanel.IsHidden)
             {
                 this.pluginUI.Reset();
-                this.OpenHelpPanel(this.settingObject.HomePage, false);
+                OpenHelpPanel(this.settingObject.HomePage, false);
             }
             else
             {
                 if (this.pluginPanel.IsFloat)
                     this.WindowVisible = !this.WindowVisible;
                 else
-                    this.OpenHelpPanel();
+                    OpenHelpPanel();
             }
         }
 
         private void OpenHelpPanel(string url, bool newTab)
         {
-            this.OpenHelpPanel();
+            OpenHelpPanel();
             this.pluginUI.OpenUrl(url, newTab);
         }
+
+        //private void OpenHelpPanel(string url, string data)
+        //{
+        //    OpenHelpPanel();
+
+        //    if (data == OPEN_THE_DOC)
+        //        this.pluginUI.OpenUrl(url, false);
+        //    else if (data == OPEN_THE_DOC_NEW_TAB)
+        //        this.pluginUI.OpenUrl(url, true);
+        //    else
+        //        this.pluginUI.OpenUrl(url, data);
+        //}
 
         private void OpenHelpPanel()
         {
@@ -675,26 +734,35 @@ namespace OpenTheDoc
             return resultList;
         }
 
-        internal List<SearchResult> TitleSearch(string text, bool contains, bool matchCase, string category)
+        internal enum SearchOption
+        {
+            Contains,
+            StartsWith,
+            Equals
+        }
+
+        internal List<SearchResult> TitleSearch(string text, SearchOption opt, bool matchCase, string category)
         {
             List<SearchResult> resultList = new List<SearchResult>();
 
             // Build XPath according to options
             string xpath;
-            System.Text.StringBuilder xpathStringFormat = new System.Text.StringBuilder("//*[");
+            string format;
+            string firstOperand;  // The first operand
 
-            if (contains) xpathStringFormat.Append("contains");
-            else xpathStringFormat.Append("starts-with");
+            if (opt == SearchOption.Contains) format = "//*[contains({0},'{1}')]";
+            else if (opt == SearchOption.StartsWith) format = "//*[starts-with({0},'{1}')]";
+            else format = "//*[{0}='{1}']";
 
             if (matchCase)
             {
-                xpathStringFormat.Append("(@label,'{0}')]");
-                xpath = String.Format(xpathStringFormat.ToString(), text);
+                firstOperand = "@label";
+                xpath = String.Format(format, firstOperand, text);
             }
             else
             {
-                xpathStringFormat.Append("(translate(@label,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'), '{0}')]");
-                xpath = String.Format(xpathStringFormat.ToString(), text.ToUpper());
+                firstOperand = "translate(@label,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ')";
+                xpath = String.Format(format, firstOperand, text.ToUpper());
             }
 
             // Search
