@@ -725,7 +725,7 @@ namespace OpenTheDoc
 
             TreeState stateClone = new TreeState
             {
-                highlight = this.contentTree.SelectedNode.FullPath,
+                highlight = this.contentTree.SelectedNode == null ? null : this.contentTree.SelectedNode.FullPath,
                 TopPath = state.TopPath,
                 BottomPath = state.BottomPath,
                 ExpandedPaths = new ArrayList(state.ExpandedPaths)
