@@ -21,7 +21,7 @@ namespace OpenTheDoc
         private System.Windows.Forms.ToolStripButton forwardButton;
         private System.Windows.Forms.ToolStripButton refreshButton;
         private System.Windows.Forms.ToolStripComboBox addressComboBox;
-        private WebBrowser webBrowser;
+        private WebBrowserEx webBrowser;
 
         public Browser()
         {
@@ -46,7 +46,7 @@ namespace OpenTheDoc
             this.refreshButton = new System.Windows.Forms.ToolStripButton();
             this.addressComboBox = new System.Windows.Forms.ToolStripComboBox();
             this.goButton = new System.Windows.Forms.ToolStripButton();
-            this.webBrowser = new WebBrowser();
+            this.webBrowser = new WebBrowserEx();
             this.toolStrip.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -303,5 +303,30 @@ namespace OpenTheDoc
 
     }
 
-    // ++++ ++++ Modified: Deleted WebBrowserEx ++++ ++++ //
+    #region WebBrowserEx
+
+    class WebBrowserEx : WebBrowser
+    {
+        /// <summary>
+        /// Handles XButton1 and XButton2
+        /// </summary>
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == 528)   // mouse event?
+            {
+                switch (m.WParam.ToInt32())
+                {
+                    case 66059:     // XButton1
+                        GoBack();
+                        break;
+                    case 131595:    // XButton2
+                        GoForward();
+                        break;
+                }
+            }
+            base.WndProc(ref m);
+        }
+    }
+
+    #endregion
 }
