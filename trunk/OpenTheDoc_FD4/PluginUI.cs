@@ -23,6 +23,7 @@ namespace OpenTheDoc
         private ImageList imageList;
         private PluginMain pluginMain;
         private DockPanel dockPanel;
+        private ContextMenuStrip tabMenu;
 
         private CheckBox matchCaseCheckBox;
         private RadioButton containsRadioButton;
@@ -459,6 +460,9 @@ namespace OpenTheDoc
             this.searchToolStrip.Items.Add(this.startsWithHost);
             this.searchToolStrip.Items.Add(this.containsHost);
             this.searchToolStrip.Items.Add(this.matchCaseHost);
+
+            // Tab
+            this.tabMenu = CreateTapMenu();
         }
 
         /// <summary>
@@ -757,7 +761,7 @@ namespace OpenTheDoc
         #endregion
 
         #region Tabs
-
+        
         private DockContent CreateDockContent(string url)
         {
             DockContent dc = new DockContent();
@@ -765,8 +769,30 @@ namespace OpenTheDoc
             dc.Text = "New Tab";
             dc.Controls.Add(CreateBrowser(url));
             dc.Show(this.dockPanel);
+            dc.TabPageContextMenuStrip = this.tabMenu;
 
             return dc;
+        }
+
+        private ContextMenuStrip CreateTapMenu()
+        {
+            ContextMenuStrip tabMenu = new ContextMenuStrip();
+            tabMenu.Items.Add(CreateMenuItem("New Tab", NewTab));
+            tabMenu.Items.Add(CreateMenuItem("Duplicate", DuplicateTab));
+            tabMenu.Items.Add(new ToolStripSeparator());
+            tabMenu.Items.Add(CreateMenuItem("Close", CloseTab));
+            tabMenu.Items.Add(CreateMenuItem("Close Others", CloseOtherTabs));
+            tabMenu.Items.Add(CreateMenuItem("Close All", CloseAllTabs));
+
+            return tabMenu;
+        }
+
+        private ToolStripMenuItem CreateMenuItem(string label, EventHandler handler)
+        {
+            ToolStripMenuItem mi = new ToolStripMenuItem();
+            mi.Text = label;
+            mi.Click += handler;
+            return mi;
         }
 
         private DockContent previousActiveDockContent = null;
@@ -800,6 +826,51 @@ namespace OpenTheDoc
             this.previousActiveDockContent = this.CurrentActiveDockContent;
             this.CurrentActiveDockContent.Activate();
         }
+
+        #region Tab EventHandler
+        private void NewTab(object sender, EventArgs e)
+        {
+            CreateDockContent("");
+        }
+
+        private void DuplicateTab(object sender, EventArgs e)
+        {
+            CreateDockContent(CurrentActiveBrowser.WebBrowser.Url.ToString());
+        }
+
+        private void CloseTab(object sender, EventArgs e)
+        {
+            CurrentActiveDockContent.Close();
+        }
+
+        private void CloseAllTabs(bool exceptCurrent)
+        {
+            int targetToClose = 0;
+            while (this.dockPanel.Contents.Count > targetToClose)
+            {
+                DockContent tab = this.dockPanel.Contents[targetToClose] as DockContent;
+                if (exceptCurrent && tab == CurrentActiveDockContent)
+                {
+                    targetToClose = 1;
+                }
+                else
+                {
+                    tab.Close();
+                }
+            }
+        }
+
+        private void CloseOtherTabs(object sender, EventArgs e)
+        {
+            CloseAllTabs(true);
+        }
+
+        private void CloseAllTabs(object sender, EventArgs e)
+        {
+            CloseAllTabs(false);
+        }
+        
+        #endregion // Tab EventHandler
 
         #endregion
 
