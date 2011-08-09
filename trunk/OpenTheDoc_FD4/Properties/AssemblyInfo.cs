@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 // you compile.
 
 [assembly: AssemblyTitle("OpenTheDoc")]
-[assembly: AssemblyDescription("Open Documentations For FlashDevelop 3")]
+[assembly: AssemblyDescription("Open Documentations For FlashDevelop 4")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("OpenTheDoc")]
@@ -24,7 +24,7 @@ using System.Runtime.InteropServices;
 // You can specify all values by your own or you can build default build and revision
 // numbers with the '*' character (the default):
 
-[assembly: AssemblyVersion("2.2.1.*")]
+[assembly: AssemblyVersion("3.0.0.*")]
 
 // The following attributes specify the key for the sign of your assembly. See the
 // .NET Framework documentation for more information about signing.

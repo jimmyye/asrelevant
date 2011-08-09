@@ -96,6 +96,11 @@ namespace OpenTheDoc
             get { return this.settingObject; }
         }
 
+        public int Api
+        {
+            get { return 1; }
+        }
+
         #endregion
 
         #region Required Methods
@@ -406,14 +411,14 @@ namespace OpenTheDoc
         {
             get
             {
-                if (this.pluginPanel.IsFloat)
+                if (this.pluginPanel != null && this.pluginPanel.IsFloat)
                     return this.pluginPanel.FloatPane.FloatWindow.Visible;
                 else
                     return false;
             }
             set
             {
-                if (this.pluginPanel.IsFloat)
+                if (this.pluginPanel != null && this.pluginPanel.IsFloat)
                     this.pluginPanel.FloatPane.FloatWindow.Visible = value;
             }
         }
@@ -425,13 +430,14 @@ namespace OpenTheDoc
         // Inspired by eylon
         private List<String> GetDocPaths() 
         {
+            this.DebugPrint("Begin GetDocPaths()...", "");
             List<string> docPaths = new List<string>();
             foreach (string docPath in settingObject.DocPaths)
             {
                 if (docPath.ToLower().StartsWith("http:"))
                     docPaths.Add(docPath);
                 // $(ProjectPath)\docs
-                else if (PluginBase.CurrentProject != null && docPath.StartsWith("$(ProjectPath)"))
+                else if (docPath.StartsWith("$(ProjectPath)") && PluginBase.CurrentProject != null)
                 {
                     string path = PluginBase.CurrentProject.GetAbsolutePath(docPath.Replace("$(ProjectPath)\\", ""));
                     if (Directory.Exists(path))
@@ -441,7 +447,7 @@ namespace OpenTheDoc
                     }
                 }
                 // $(GlobalClasspaths)\..\docs
-                else if (ASCompletion.Context.ASContext.Context.Settings != null && docPath.StartsWith("$(GlobalClasspaths)"))
+                else if (docPath.StartsWith("$(GlobalClasspaths)") && ASCompletion.Context.ASContext.Context.Settings != null)
                 {
                     string relativePath = docPath.Replace("$(GlobalClasspaths)\\", "");
                     foreach (string globalClasspath in ASCompletion.Context.ASContext.Context.Settings.UserClasspath)
@@ -474,12 +480,14 @@ namespace OpenTheDoc
                     docPaths.Add(docPath);
                 
             }
+            this.DebugPrint("End GetDocPaths().", "");
             return docPaths;
         }
 
         // Updates bookCache after changing settings
         internal void UpdateBookCache()
         {
+            this.DebugPrint("Begin UpdateBookCache()...", "");
             Dictionary<string, Book> newBookCache = new Dictionary<string, Book>();
             foreach (string docPath in GetDocPaths())
             {
@@ -506,6 +514,7 @@ namespace OpenTheDoc
                 }
             }
             this.bookCache = newBookCache;
+            this.DebugPrint("End UpdateBookCache().", "");
         }
 
         // Get books from bookCache, filter by category,
@@ -830,6 +839,7 @@ namespace OpenTheDoc
         }
 
         #endregion
+
     }
 
     #region Custom Classes and Structs
