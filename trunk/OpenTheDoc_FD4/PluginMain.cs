@@ -35,8 +35,9 @@ namespace OpenTheDoc
 
         // commands
         private const string OPEN_THE_DOC = "OpenTheDoc";
-        private const string OPEN_THE_DOC_NEW_TAB = "OpenTheDocNewTab";
-        private const string OPEN_HELP_PANEL = "OpenHelpPanel";
+        private const string OPEN_THE_DOC_NEW_TAB = "OpenTheDoc.NewTab";
+        private const string OPEN_HELP_PANEL = "OpenTheDoc.OpenHelpPanel";
+        public static string OPEN_THE_URL_NEW_TAB = "OpenTheDoc.UrlNewTab";
 
         private Dictionary<string, Book> bookCache;             // <tocPath, book>
 
@@ -139,7 +140,8 @@ namespace OpenTheDoc
             {
                 // Handle custom command OPEN_THE_DOC and OPEN_THE_DOC_NEW_TAB, API Search
                 case EventType.Command:
-                    string command = (e as DataEvent).Action;
+                    DataEvent de = e as DataEvent;
+                    string command = de.Action;
                     if (command == OPEN_THE_DOC || command == OPEN_THE_DOC_NEW_TAB)
                     {
                         // Copy Hashtable to Dictionary<string,string> to avoid casting
@@ -177,6 +179,10 @@ namespace OpenTheDoc
                         }
                         
                         e.Handled = true;
+                    }
+                    else if (command == OPEN_THE_URL_NEW_TAB)
+                    {
+                        OpenHelpPanel(de.Data as string, true);
                     }
                     break;
 

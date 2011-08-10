@@ -199,14 +199,14 @@ namespace OpenTheDoc
             this.addressComboBox.Size = size;
         }
 
-        // ++++ ++++ Modified ++++ ++++ //
         /// <summary>
-        /// If the page tries to open a new window use itseft
+        /// If the page tries to open a new window use a new tab,
+        /// currently only support Shift + click
         /// </summary>
         private void WebBrowserNewWindow(Object sender, CancelEventArgs e)
         {
-            // TODO: Open in a new tab
-            this.webBrowser.Navigate(this.webBrowser.StatusText);
+            DataEvent de = new DataEvent(EventType.Command, OpenTheDoc.PluginMain.OPEN_THE_URL_NEW_TAB, this.webBrowser.StatusText);
+            PluginCore.Managers.EventManager.DispatchEvent(this, de);
             e.Cancel = true;
         }
 
