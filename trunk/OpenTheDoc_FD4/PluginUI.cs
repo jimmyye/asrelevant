@@ -868,7 +868,7 @@ namespace OpenTheDoc
                         {
                             tabBar = GetHitTabBar();
                             if (tabBar != null && GetHitTabIndex(tabBar) == -1) // click on tab bar but not on a tab
-                                CreateDockContent("", tabBar.Parent as DockPane);
+                                OpenUrl("", true, tabBar.Parent as DockPane);
                         }
                         lastLButtonDownTime = DateTime.Now;
                         break;
@@ -901,12 +901,12 @@ namespace OpenTheDoc
 
         private void NewTab(object sender, EventArgs e)
         {
-            CreateDockContent("");
+            OpenUrl("", true);
         }
 
         private void DuplicateTab(object sender, EventArgs e)
         {
-            CreateDockContent(CurrentActiveBrowser.WebBrowser.Url.ToString());
+            OpenUrl(CurrentActiveBrowser.WebBrowser.Url.ToString(), true);
         }
 
         private void CloseTab(object sender, EventArgs e)
@@ -982,15 +982,20 @@ namespace OpenTheDoc
 
         public void OpenUrl(string url)
         {
-            OpenUrl(url, false);
+            OpenUrl(url, false, null);
         }
 
         public void OpenUrl(string url, bool newTab)
         {
+            OpenUrl(url, newTab, null);
+        }
+
+        public void OpenUrl(string url, bool newTab, DockPane pane)
+        {
             if (newTab || CurrentActiveBrowser == null)
             {
                 SaveContentTreeState(this.previousActiveDockContent);
-                CreateDockContent(url);
+                CreateDockContent(url, pane);
             }
             else
                 CurrentActiveBrowser.WebBrowser.Navigate(url);
