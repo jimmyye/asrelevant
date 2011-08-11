@@ -307,19 +307,23 @@ namespace OpenTheDoc
 
     class WebBrowserEx : WebBrowser
     {
+        const int WM_PARENTNOTIFY = 0x210;
+        const int WM_XBUTTON1DOWN = 0x1020B;
+        const int WM_XBUTTON2DOWN = 0x2020B;
+
         /// <summary>
         /// Handles XButton1 and XButton2
         /// </summary>
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == 528)   // mouse event?
+            if (m.Msg == WM_PARENTNOTIFY)
             {
                 switch (m.WParam.ToInt32())
                 {
-                    case 66059:     // XButton1
+                    case WM_XBUTTON1DOWN:     // XButton1
                         GoBack();
                         break;
-                    case 131595:    // XButton2
+                    case WM_XBUTTON2DOWN:    // XButton2
                         GoForward();
                         break;
                 }
