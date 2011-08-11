@@ -761,16 +761,26 @@ namespace OpenTheDoc
         #endregion
 
         #region Tabs
-        
+
         private DockContent CreateDockContent(string url)
+        {
+            return CreateDockContent(url, null);
+        }
+
+        private DockContent CreateDockContent(string url, DockPane pane)
         {
             DockContent dc = new DockContent();
             dc.DockAreas = DockAreas.Document;
             dc.Text = "New Tab";
             dc.Controls.Add(CreateBrowser(url));
-            dc.Show(this.dockPanel);
             dc.TabPageContextMenuStrip = this.tabMenu;
-
+            if (pane != null)
+                dc.Show(pane, null);
+            else if (this.dockPanel.ActivePane != null)
+                dc.Show(this.dockPanel.ActivePane, null);
+            else
+                dc.Show(this.dockPanel);
+            
             return dc;
         }
 
@@ -783,7 +793,7 @@ namespace OpenTheDoc
             tabMenu.Items.Add(CreateMenuItem("Close", CloseTab));
             tabMenu.Items.Add(CreateMenuItem("Close Others", CloseOtherTabs));
             tabMenu.Items.Add(CreateMenuItem("Close All", CloseAllTabs));
-
+            
             return tabMenu;
         }
 
@@ -828,6 +838,67 @@ namespace OpenTheDoc
         }
 
         #region Tab EventHandler
+
+        // HACK: middle click on tab and double click on tab bar
+        const int WM_PARENTNOTIFY = 0x210;
+        const int WM_LBUTTONDOWN = 0x0201;
+        const int WM_MBUTTONDOWN = 0x0207;
+        private DateTime lastLButtonDownTime;
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_PARENTNOTIFY)
+            {
+                switch (m.WParam.ToInt32())
+                {
+                    case WM_MBUTTONDOWN:    // Middle click to close a tab
+                        // if in the area of a tab bar
+                        Control tabBar = GetHitTabBar();
+                        if (tabBar != null)
+                        {
+                            int i = GetHitTabIndex(tabBar);
+                            if (i != -1)  // hit on a tab
+                                (tabBar.Parent as DockPane).Contents[i].DockHandler.Close();
+                        }
+                        break;
+
+                    case WM_LBUTTONDOWN:    // Manually handle double click, to open a new tab
+                        DateTime now = DateTime.Now;
+                        TimeSpan ts = now - lastLButtonDownTime;
+                        if (ts.TotalMilliseconds < SystemInformation.DoubleClickTime)   // if this is a double click
+                        {
+                            tabBar = GetHitTabBar();
+                            if (tabBar != null && GetHitTabIndex(tabBar) == -1) // click on tab bar but not on a tab
+                                CreateDockContent("", tabBar.Parent as DockPane);
+                        }
+                        lastLButtonDownTime = DateTime.Now;
+                        break;
+                }
+            }
+            base.WndProc(ref m);
+        }
+
+        private Control GetHitTabBar()
+        {
+            Control tabBar = null;
+            foreach (DockPane pane in this.dockPanel.Panes)
+            {
+                tabBar = pane.GetChildAtPoint(pane.PointToClient(Control.MousePosition));
+                if (tabBar != null) break;
+            }
+
+            if (tabBar != null && tabBar.ToString() == "WeifenLuo.WinFormsUI.Docking.VS2005DockPaneStrip")
+                return tabBar;
+            else
+                return null;
+        }
+
+        private int GetHitTabIndex(Control tabBar)
+        {
+            var HitTest = tabBar.GetType().GetMethod("HitTest", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, new Type[] { typeof(Point) }, null);
+            int i = (int)HitTest.Invoke(tabBar, new object[] { tabBar.PointToClient(Control.MousePosition) });
+            return i;
+        }
+
         private void NewTab(object sender, EventArgs e)
         {
             CreateDockContent("");
