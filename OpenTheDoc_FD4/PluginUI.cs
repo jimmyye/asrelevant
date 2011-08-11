@@ -528,7 +528,7 @@ namespace OpenTheDoc
             if (treeNode.Nodes.Count == 1 && treeNode.Nodes[0].Text != "Shows PlusMinus") return;   // ChildNodes loaded
             treeNode.Nodes.Clear();
 
-            // Loads direct childNodes only, others will be loaded asynchronously
+            // Loads direct childNodes only, others will be loaded when click on
             foreach (XmlNode node in tocNode)
             {
                 TreeNode tn = new TreeNode();
@@ -569,7 +569,7 @@ namespace OpenTheDoc
             string url = Path.Combine(docPath, href);
 
             isNodeClicked = true;
-            OpenUrl(url);
+            OpenUrl(url, Control.ModifierKeys == Keys.Shift);
             pluginMain.DebugPrint("Doc Url:", url);
         }
 
@@ -645,7 +645,7 @@ namespace OpenTheDoc
                         target = c[step];
                         if (target == null) break;  // Not found
 
-                        this.LoadChildNodes(target, target.Tag as XmlNode); // Asynchronously
+                        LoadChildNodes(target, target.Tag as XmlNode); // Lazy load
                         c = target.Nodes;
                     }
 
