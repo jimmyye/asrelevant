@@ -18,13 +18,12 @@ Installation
 * Restart FD
 
 Settings
-* Set DocPaths  (Tools > Program Settings > OpenTheDoc) to contain your documentation folders
+* DocPaths: enter your documentation folders, then click button "Refresh Contents" on (OpenTheDoc) Help Panel to update
   - 4 kinds of DocPath accepted:
     X:\path\to\alldocs\as3\
     X:\path\to\alldocs\*, means all folders in alldocs
     $(ProjectPath)\docs, documentation of current project
     $(GlobalClasspaths)\..\docs, documentations of global classes
-* Click "Refresh Contents" on (OpenTheDoc) Help Panel to update
 
 Usage
 * Move cursor on an word (a class, method, property, etc.) and press F1, the documentation will be open in Help Panel if exsits
@@ -43,7 +42,7 @@ Documentations
 * Support Well-organized documentations without TOC. (Use TocGen to generate a TOC).
 * Well-organized documentations with TOC, check out http://livedocs.adobe.com.
 * Documentation categories. Categorize by attribute "categories" of the root node of TOC file.
-* Categories are also used to filter context search (API search) results. i.e. docs categorized in as2 are only available in as2 projects. Uncategorized docs have no constraints.
+* Categories are also used to sort context search (API search) results, i.e. docs categorized in as2 will be at top of the result list in as2 projects. Possible value: as2, as3, haxe.
 
 Some ASDocs release with Flash IDE and Flex Builder.
 Flex3 reference in Flex Builder 3: 
